@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "@fontsource-variable/vazirmatn";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/600.css";
+
+@theme {
+  --font-sans: "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Courier New", monospace;
+
+  /* Ink — text & structural neutrals, warm-slate rather than pure gray */
+  --color-ink-900: #1c2430;
+  --color-ink-700: #3a4657;
+  --color-ink-500: #647480;
+  --color-ink-300: #a8b0bc;
+  --color-ink-100: #e7e9ed;
+  --color-ink-50: #f4f5f7;
+
+  /* Paper — warm surfaces instead of clinical pure white */
+  --color-paper: #fbfaf7;
+  --color-surface: #ffffff;
+
+  /* Primary — deep teal-green, trust & care without default-blue cliché */
+  --color-primary-50: #eaf3f0;
+  --color-primary-100: #d2e6e0;
+  --color-primary-200: #a8cdc1;
+  --color-primary-300: #7db3a2;
+  --color-primary-400: #549a85;
+  --color-primary-500: #3a8171;
+  --color-primary-600: #2f6f62;
+  --color-primary-700: #255850;
+  --color-primary-800: #1c433d;
+  --color-primary-900: #142f2a;
+
+  /* Amber — pending / in-progress / the signature "vital sign" accent */
+  --color-amber-50: #fbf0e6;
+  --color-amber-100: #f6ddc2;
+  --color-amber-200: #eebd8b;
+  --color-amber-300: #e69d63;
+  --color-amber-400: #de8a4c;
+  --color-amber-500: #d97d3d;
+  --color-amber-600: #c06a2e;
+  --color-amber-700: #9c5525;
+  --color-amber-800: #78411d;
+  --color-amber-900: #542d14;
+
+  /* Brick — rejected / error / destructive */
+  --color-brick-50: #fbeae8;
+  --color-brick-100: #f4cac5;
+  --color-brick-200: #e69c92;
+  --color-brick-300: #d96f60;
+  --color-brick-400: #cc5240;
+  --color-brick-500: #c0392b;
+  --color-brick-600: #a53025;
+  --color-brick-700: #82251d;
+  --color-brick-800: #5f1a15;
+  --color-brick-900: #3e100d;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink-900);
+}
+
+/* Tabular numerals for money, order codes, timestamps — the "lab report" register */
+.font-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
