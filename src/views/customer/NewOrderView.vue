@@ -6,8 +6,11 @@ import * as catalogApi from '@/api/catalogApi'
 import { useOrdersStore } from '@/stores/ordersStore'
 import { useFileUpload } from '@/composables/useFileUpload'
 import { apiErrorMessage } from '@/lib/apiError'
+import { isValidNationalCode } from '@/lib/nationalCode'
+import { BASIC_INSURANCE_OPTIONS, SUPPLEMENTARY_INSURANCE_OPTIONS } from '@/lib/insurance'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
+import AppSelect from '@/components/common/AppSelect.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import MultiSelectDropdown from '@/components/common/MultiSelectDropdown.vue'
@@ -24,6 +27,12 @@ const note = ref('')
 const file = ref(null)
 const submitting = ref(false)
 
+const basicInsurance = ref('None')
+const supplementaryInsurance = ref('None')
+const isForThirdParty = ref(false)
+const thirdPartyNationalCode = ref('')
+const thirdPartyPhoneNumber = ref('')
+
 onMounted(async () => {
   try {
     tests.value = (await catalogApi.listTests()) ?? []
@@ -39,10 +48,32 @@ async function submit() {
     toast.warning('حداقل یک آزمایش را انتخاب کنید')
     return
   }
+  if (isForThirdParty.value) {
+    if (!isValidNationalCode(thirdPartyNationalCode.value)) {
+      toast.warning('کد ملی فرد موردنظر معتبر نیست')
+      return
+    }
+    if (!/^09\d{9}$/.test(thirdPartyPhoneNumber.value)) {
+      toast.warning('شماره موبایل فرد موردنظر معتبر نیست')
+      return
+    }
+  }
   submitting.value = true
   try {
     const order = await run((onUploadProgress) =>
-      ordersStore.createOrder({ labTestIds: selectedIds.value, note: note.value, file: file.value }, onUploadProgress),
+      ordersStore.createOrder(
+        {
+          labTestIds: selectedIds.value,
+          note: note.value,
+          file: file.value,
+          basicInsurance: basicInsurance.value,
+          supplementaryInsurance: supplementaryInsurance.value,
+          thirdParty: isForThirdParty.value
+            ? { nationalCode: thirdPartyNationalCode.value, phoneNumber: thirdPartyPhoneNumber.value }
+            : null,
+        },
+        onUploadProgress,
+      ),
     )
     toast.success('سفارش با موفقیت ثبت شد')
     router.push({ name: 'order-detail', params: { id: order.id } })
@@ -67,6 +98,27 @@ async function submit() {
         placeholder="جستجو و انتخاب آزمایش…"
         empty-text="آزمایشی یافت نشد"
       />
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      <AppSelect v-model="basicInsurance" label="بیمه پایه" :options="BASIC_INSURANCE_OPTIONS" />
+      <AppSelect v-model="supplementaryInsurance" label="بیمه تکمیلی" :options="SUPPLEMENTARY_INSURANCE_OPTIONS" />
+    </div>
+
+    <div class="rounded-2xl border border-ink-100 bg-surface p-4">
+      <label class="flex cursor-pointer items-center gap-2.5">
+        <input
+          v-model="isForThirdParty"
+          type="checkbox"
+          class="size-4 rounded border-ink-300 text-primary-600 focus:ring-primary-500"
+        />
+        <span class="text-sm font-medium text-ink-800">این سفارش برای شخص دیگری است</span>
+      </label>
+
+      <div v-if="isForThirdParty" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <AppInput v-model="thirdPartyNationalCode" label="کد ملی فرد" dir="ltr" inputmode="numeric" placeholder="۱۰ رقم" />
+        <AppInput v-model="thirdPartyPhoneNumber" label="شماره موبایل فرد" dir="ltr" placeholder="09xxxxxxxxx" />
+      </div>
     </div>
 
     <AppInput v-model="note" as="textarea" label="یادداشت برای پزشک (اختیاری)" placeholder="توضیح علائم یا نکات لازم…" />

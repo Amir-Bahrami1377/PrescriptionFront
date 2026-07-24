@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useToast } from 'vue-toastification'
 import { useAuth } from '@/composables/useAuth'
 import { apiErrorMessage } from '@/lib/apiError'
+import { isValidNationalCode } from '@/lib/nationalCode'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
 
@@ -16,7 +17,7 @@ const submitting = ref(false)
 const schema = toTypedSchema(
   z.object({
     fullName: z.string().min(3, 'نام و نام خانوادگی را کامل وارد کنید'),
-    nationalCode: z.string().regex(/^\d{10}$/, 'کد ملی باید ۱۰ رقم باشد'),
+    nationalCode: z.string().refine(isValidNationalCode, 'کد ملی معتبر نیست'),
     age: z.coerce.number({ invalid_type_error: 'سن را وارد کنید' }).int().min(1, 'سن نامعتبر است').max(120, 'سن نامعتبر است'),
     gender: z.enum(['Male', 'Female'], { required_error: 'جنسیت را انتخاب کنید', invalid_type_error: 'جنسیت را انتخاب کنید' }),
   }),

@@ -4,19 +4,34 @@ import axiosClient from './axiosClient'
  * Verified against the running backend: an order can carry multiple lab tests via the
  * repeated `labTestIds` field (at least one required), and the referral file is optional —
  * when one is attached it must be JPEG/PNG/PDF, but it can be omitted entirely.
+ * `thirdParty` is only sent when the order is on behalf of someone else — the backend
+ * rejects isForThirdParty=true without both a valid national code and phone number.
  * Response is { orderId, status }.
  */
-export function createOrder({ labTestIds, note, file }, onUploadProgress) {
+export function createOrder({ labTestIds, note, file, basicInsurance, supplementaryInsurance, thirdParty }, onUploadProgress) {
   const form = new FormData()
   for (const id of labTestIds) form.append('labTestIds', id)
   if (note) form.append('note', note)
   if (file) form.append('file', file)
+  if (basicInsurance) form.append('basicInsurance', basicInsurance)
+  if (supplementaryInsurance) form.append('supplementaryInsurance', supplementaryInsurance)
+  if (thirdParty) {
+    form.append('isForThirdParty', 'true')
+    form.append('thirdPartyNationalCode', thirdParty.nationalCode)
+    form.append('thirdPartyPhoneNumber', thirdParty.phoneNumber)
+  }
   return axiosClient
     .post('/api/orders', form, { headers: { 'Content-Type': 'multipart/form-data' }, onUploadProgress })
     .then((res) => res.data)
 }
 
-/** Response shape verified against the backend: { id, labTestIds, priceInRials, status, rejectionReason, prescriptionReferenceNumber, paymentReferenceId, hasResult, createdAtUtc, completedAtUtc }. */
+/**
+ * Response shape verified against the backend: { id, labTestIds, priceInRials, status,
+ * rejectionReason, prescriptionReferenceNumber, paymentReferenceId, hasResult, basicInsurance,
+ * supplementaryInsurance, isForThirdParty, thirdPartyNationalCode, thirdPartyPhoneNumber,
+ * createdAtUtc, completedAtUtc }. The third-party fields are only populated when the caller
+ * is authorized to see them (the customer who created the order, or a reviewing doctor).
+ */
 export function getOrder(id) {
   return axiosClient.get(`/api/orders/${id}`).then((res) => res.data)
 }

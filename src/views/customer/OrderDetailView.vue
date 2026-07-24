@@ -6,6 +6,7 @@ import * as ordersApi from '@/api/ordersApi'
 import { normalizeOrderStatus } from '@/composables/useOrderStatus'
 import { useTestCatalog } from '@/composables/useTestCatalog'
 import { apiErrorMessage } from '@/lib/apiError'
+import { basicInsuranceLabel, supplementaryInsuranceLabel } from '@/lib/insurance'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import OrderTimeline from '@/components/common/OrderTimeline.vue'
@@ -113,6 +114,27 @@ async function payNow() {
         <span class="font-data text-ink-900">{{ formatRials(orderTotal(order)) }}</span>
       </div>
       <p v-if="order.hasResult" class="mt-3 rounded-xl bg-primary-50 p-3 text-sm text-primary-700">جواب آزمایش بارگذاری شده است.</p>
+    </div>
+
+    <div
+      v-if="order.basicInsurance !== 'None' || order.supplementaryInsurance !== 'None'"
+      class="rounded-2xl border border-ink-100 bg-surface p-4"
+    >
+      <h2 class="mb-2 font-bold text-ink-900">اطلاعات بیمه</h2>
+      <div class="flex items-center justify-between py-1 text-sm">
+        <span class="text-ink-500">بیمه پایه</span>
+        <span class="text-ink-900">{{ basicInsuranceLabel(order.basicInsurance) }}</span>
+      </div>
+      <div class="flex items-center justify-between py-1 text-sm">
+        <span class="text-ink-500">بیمه تکمیلی</span>
+        <span class="text-ink-900">{{ supplementaryInsuranceLabel(order.supplementaryInsurance) }}</span>
+      </div>
+    </div>
+
+    <div v-if="order.isForThirdParty" class="rounded-2xl border border-primary-100 bg-primary-50 p-4">
+      <p class="text-sm font-medium text-primary-800">این سفارش برای شخص دیگری ثبت شده است</p>
+      <p class="font-data mt-1 text-sm text-primary-700">کد ملی: {{ order.thirdPartyNationalCode }}</p>
+      <p class="font-data text-sm text-primary-700">موبایل: {{ order.thirdPartyPhoneNumber }}</p>
     </div>
 
     <div v-if="order.prescriptionReferenceNumber" class="rounded-2xl border border-primary-100 bg-primary-50 p-4">
