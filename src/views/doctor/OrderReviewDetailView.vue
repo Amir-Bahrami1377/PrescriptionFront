@@ -5,7 +5,7 @@ import { useToast } from 'vue-toastification'
 import * as ordersApi from '@/api/ordersApi'
 import { useTestCatalog } from '@/composables/useTestCatalog'
 import { apiErrorMessage } from '@/lib/apiError'
-import { basicInsuranceLabel, supplementaryInsuranceLabel } from '@/lib/insurance'
+import { basicInsuranceLabel } from '@/lib/insurance'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
@@ -78,18 +78,11 @@ async function submit() {
       <p v-if="order.requestsConsultation" class="mt-2 text-xs text-primary-600">مشتری درخواست مشاوره پزشک هم داده است.</p>
     </div>
 
-    <div
-      v-if="order.basicInsurance !== 'None' || order.supplementaryInsurance !== 'None'"
-      class="rounded-2xl border border-ink-100 bg-surface p-4"
-    >
+    <div v-if="order.basicInsurance !== 'None'" class="rounded-2xl border border-ink-100 bg-surface p-4">
       <h2 class="mb-2 font-bold text-ink-900">اطلاعات بیمه</h2>
       <div class="flex items-center justify-between py-1 text-sm">
         <span class="text-ink-500">بیمه پایه</span>
         <span class="text-ink-900">{{ basicInsuranceLabel(order.basicInsurance) }}</span>
-      </div>
-      <div class="flex items-center justify-between py-1 text-sm">
-        <span class="text-ink-500">بیمه تکمیلی</span>
-        <span class="text-ink-900">{{ supplementaryInsuranceLabel(order.supplementaryInsurance) }}</span>
       </div>
     </div>
 

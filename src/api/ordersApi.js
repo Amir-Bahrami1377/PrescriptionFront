@@ -8,16 +8,12 @@ import axiosClient from './axiosClient'
  * rejects isForThirdParty=true without both a valid national code and phone number.
  * Response is { orderId, status }.
  */
-export function createOrder(
-  { labTestIds, note, file, basicInsurance, supplementaryInsurance, thirdParty, requestsConsultation },
-  onUploadProgress,
-) {
+export function createOrder({ labTestIds, note, file, basicInsurance, thirdParty, requestsConsultation }, onUploadProgress) {
   const form = new FormData()
   for (const id of labTestIds) form.append('labTestIds', id)
   if (note) form.append('note', note)
   if (file) form.append('file', file)
   if (basicInsurance) form.append('basicInsurance', basicInsurance)
-  if (supplementaryInsurance) form.append('supplementaryInsurance', supplementaryInsurance)
   if (thirdParty) {
     form.append('isForThirdParty', 'true')
     form.append('thirdPartyNationalCode', thirdParty.nationalCode)
@@ -29,15 +25,20 @@ export function createOrder(
     .then((res) => res.data)
 }
 
+/** The exact basic-insurance enum member names, straight from the backend. Anonymous endpoint. */
+export function listBasicInsuranceTypes() {
+  return axiosClient.get('/api/orders/basic-insurance-types').then((res) => res.data)
+}
+
 /**
  * Response shape verified against the backend: { id, labTestIds, priceInRials, status,
  * rejectionReason, prescriptionReferenceNumber, paymentReferenceId, hasResult, basicInsurance,
- * supplementaryInsurance, isForThirdParty, thirdPartyNationalCode, thirdPartyPhoneNumber,
- * requestsConsultation, consultationOpinion, createdAtUtc, completedAtUtc }. The third-party
- * fields are only populated when the caller is authorized to see them (the customer who
- * created the order, or a reviewing doctor). When requestsConsultation is true, price includes
- * the doctor's consultation fee on top of their visit fee, and the order's post-payment path
- * is AwaitingPayment -> AwaitingTestResultUpload -> AwaitingConsultationOpinion -> Completed
+ * isForThirdParty, thirdPartyNationalCode, thirdPartyPhoneNumber, requestsConsultation,
+ * consultationOpinion, createdAtUtc, completedAtUtc }. The third-party fields are only
+ * populated when the caller is authorized to see them (the customer who created the order,
+ * or a reviewing doctor). When requestsConsultation is true, price includes the doctor's
+ * consultation fee on top of their visit fee, and the order's post-payment path is
+ * AwaitingPayment -> AwaitingTestResultUpload -> AwaitingConsultationOpinion -> Completed
  * instead of the normal AwaitingPayment -> InProgress -> Completed.
  */
 export function getOrder(id) {
@@ -126,4 +127,13 @@ export function submitConsultationOpinion(id, opinion) {
 /** Shared queue: consultation orders whose test result was uploaded, awaiting a doctor's opinion. */
 export function listAwaitingConsultationOpinion() {
   return axiosClient.get('/api/orders/awaiting-consultation-opinion').then((res) => res.data)
+}
+
+/**
+ * A short-lived presigned URL for the order's uploaded result file — covers both the plain
+ * doctor-upload flow and the consultation-result flow, since both populate the same file key.
+ * Response is { url, expiresInSeconds }. 404s if no result has been uploaded yet.
+ */
+export function getResultFileUrl(id) {
+  return axiosClient.get(`/api/orders/${id}/result-file`).then((res) => res.data)
 }

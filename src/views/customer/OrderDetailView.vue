@@ -6,7 +6,7 @@ import * as ordersApi from '@/api/ordersApi'
 import { normalizeOrderStatus } from '@/composables/useOrderStatus'
 import { useTestCatalog } from '@/composables/useTestCatalog'
 import { apiErrorMessage } from '@/lib/apiError'
-import { basicInsuranceLabel, supplementaryInsuranceLabel } from '@/lib/insurance'
+import { basicInsuranceLabel } from '@/lib/insurance'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import OrderTimeline from '@/components/common/OrderTimeline.vue'
@@ -21,6 +21,7 @@ const { ensureLoaded, testName } = useTestCatalog()
 const order = ref(null)
 const loading = ref(true)
 const paying = ref(false)
+const viewingResult = ref(false)
 const orderTestIds = computed(() => order.value?.labTestIds ?? [])
 
 async function load() {
@@ -78,6 +79,18 @@ async function payNow() {
     paying.value = false
   }
 }
+
+async function viewResult() {
+  viewingResult.value = true
+  try {
+    const { url } = await ordersApi.getResultFileUrl(props.id)
+    window.open(url, '_blank', 'noopener')
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'دریافت فایل جواب آزمایش با خطا مواجه شد'))
+  } finally {
+    viewingResult.value = false
+  }
+}
 </script>
 
 <template>
@@ -114,7 +127,12 @@ async function payNow() {
         <span class="font-data text-ink-900">{{ formatRials(orderTotal(order)) }}</span>
       </div>
       <p v-if="order.requestsConsultation" class="mt-1 text-xs text-ink-500">شامل هزینه مشاوره پزشک</p>
-      <p v-if="order.hasResult" class="mt-3 rounded-xl bg-primary-50 p-3 text-sm text-primary-700">جواب آزمایش بارگذاری شده است.</p>
+      <div v-if="order.hasResult" class="mt-3 flex items-center justify-between rounded-xl bg-primary-50 p-3">
+        <p class="text-sm text-primary-700">جواب آزمایش بارگذاری شده است.</p>
+        <button type="button" class="text-sm font-medium text-primary-700 hover:underline" :disabled="viewingResult" @click="viewResult">
+          مشاهده جواب
+        </button>
+      </div>
     </div>
 
     <div v-if="order.consultationOpinion" class="rounded-2xl border border-primary-100 bg-primary-50 p-4">
@@ -122,18 +140,11 @@ async function payNow() {
       <p class="text-sm text-primary-700">{{ order.consultationOpinion }}</p>
     </div>
 
-    <div
-      v-if="order.basicInsurance !== 'None' || order.supplementaryInsurance !== 'None'"
-      class="rounded-2xl border border-ink-100 bg-surface p-4"
-    >
+    <div v-if="order.basicInsurance !== 'None'" class="rounded-2xl border border-ink-100 bg-surface p-4">
       <h2 class="mb-2 font-bold text-ink-900">اطلاعات بیمه</h2>
       <div class="flex items-center justify-between py-1 text-sm">
         <span class="text-ink-500">بیمه پایه</span>
         <span class="text-ink-900">{{ basicInsuranceLabel(order.basicInsurance) }}</span>
-      </div>
-      <div class="flex items-center justify-between py-1 text-sm">
-        <span class="text-ink-500">بیمه تکمیلی</span>
-        <span class="text-ink-900">{{ supplementaryInsuranceLabel(order.supplementaryInsurance) }}</span>
       </div>
     </div>
 

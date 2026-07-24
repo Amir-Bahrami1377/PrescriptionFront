@@ -15,6 +15,7 @@ const { ensureLoaded, testNames } = useTestCatalog()
 const orders = ref([])
 const loading = ref(true)
 const completingId = ref(null)
+const viewingResultId = ref(null)
 const referenceInputs = reactive({})
 
 onMounted(async () => {
@@ -42,6 +43,18 @@ async function complete(id) {
     completingId.value = null
   }
 }
+
+async function viewResult(id) {
+  viewingResultId.value = id
+  try {
+    const { url } = await ordersApi.getResultFileUrl(id)
+    window.open(url, '_blank', 'noopener')
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'دریافت فایل جواب آزمایش با خطا مواجه شد'))
+  } finally {
+    viewingResultId.value = null
+  }
+}
 </script>
 
 <template>
@@ -61,6 +74,15 @@ async function complete(id) {
       <p v-if="order.hasResult === false" class="mt-2 text-xs text-amber-700">
         تا زمانی که مشتری جواب آزمایش را بارگذاری نکند، این سفارش قابل تکمیل نیست.
       </p>
+      <button
+        v-else-if="order.hasResult"
+        type="button"
+        class="mt-2 text-xs font-medium text-primary-600 hover:underline"
+        :disabled="viewingResultId === order.id"
+        @click="viewResult(order.id)"
+      >
+        مشاهده جواب آزمایش
+      </button>
 
       <AppInput
         v-model="referenceInputs[order.id]"

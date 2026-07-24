@@ -7,7 +7,7 @@ import { useOrdersStore } from '@/stores/ordersStore'
 import { useFileUpload } from '@/composables/useFileUpload'
 import { apiErrorMessage } from '@/lib/apiError'
 import { isValidNationalCode } from '@/lib/nationalCode'
-import { BASIC_INSURANCE_OPTIONS, SUPPLEMENTARY_INSURANCE_OPTIONS } from '@/lib/insurance'
+import { useInsuranceTypes } from '@/composables/useInsuranceTypes'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppSelect from '@/components/common/AppSelect.vue'
@@ -19,6 +19,7 @@ const router = useRouter()
 const toast = useToast()
 const ordersStore = useOrdersStore()
 const { uploading, progress, run } = useFileUpload()
+const { options: insuranceOptions, ensureLoaded: ensureInsuranceTypesLoaded } = useInsuranceTypes()
 
 const tests = ref([])
 const loadingTests = ref(true)
@@ -28,7 +29,6 @@ const file = ref(null)
 const submitting = ref(false)
 
 const basicInsurance = ref('None')
-const supplementaryInsurance = ref('None')
 const isForThirdParty = ref(false)
 const thirdPartyNationalCode = ref('')
 const thirdPartyPhoneNumber = ref('')
@@ -36,7 +36,8 @@ const requestsConsultation = ref(false)
 
 onMounted(async () => {
   try {
-    tests.value = (await catalogApi.listTests()) ?? []
+    const [testList] = await Promise.all([catalogApi.listTests(), ensureInsuranceTypesLoaded()])
+    tests.value = testList ?? []
   } catch {
     toast.error('دریافت فهرست آزمایش‌ها با خطا مواجه شد')
   } finally {
@@ -68,7 +69,6 @@ async function submit() {
           note: note.value,
           file: file.value,
           basicInsurance: basicInsurance.value,
-          supplementaryInsurance: supplementaryInsurance.value,
           thirdParty: isForThirdParty.value
             ? { nationalCode: thirdPartyNationalCode.value, phoneNumber: thirdPartyPhoneNumber.value }
             : null,
@@ -102,10 +102,7 @@ async function submit() {
       />
     </div>
 
-    <div class="grid gap-3 sm:grid-cols-2">
-      <AppSelect v-model="basicInsurance" label="بیمه پایه" :options="BASIC_INSURANCE_OPTIONS" />
-      <AppSelect v-model="supplementaryInsurance" label="بیمه تکمیلی" :options="SUPPLEMENTARY_INSURANCE_OPTIONS" />
-    </div>
+    <AppSelect v-model="basicInsurance" label="بیمه پایه" :options="insuranceOptions" />
 
     <div class="rounded-2xl border border-ink-100 bg-surface p-4">
       <label class="flex cursor-pointer items-center gap-2.5">

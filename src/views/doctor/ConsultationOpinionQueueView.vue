@@ -4,6 +4,7 @@ import { useToast } from 'vue-toastification'
 import * as ordersApi from '@/api/ordersApi'
 import { useTestCatalog } from '@/composables/useTestCatalog'
 import { apiErrorMessage } from '@/lib/apiError'
+import { basicInsuranceLabel } from '@/lib/insurance'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
@@ -17,6 +18,7 @@ const loading = ref(true)
 const selected = ref(null)
 const opinion = ref('')
 const submitting = ref(false)
+const viewingResult = ref(false)
 
 async function load() {
   loading.value = true
@@ -34,6 +36,18 @@ onMounted(load)
 function open(order) {
   selected.value = order
   opinion.value = ''
+}
+
+async function viewResult() {
+  viewingResult.value = true
+  try {
+    const { url } = await ordersApi.getResultFileUrl(selected.value.id)
+    window.open(url, '_blank', 'noopener')
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'دریافت فایل جواب آزمایش با خطا مواجه شد'))
+  } finally {
+    viewingResult.value = false
+  }
 }
 
 async function submit() {
@@ -65,6 +79,8 @@ async function submit() {
 
     <EmptyState v-else-if="!orders.length" title="سفارشی در انتظار نظر مشاوره نیست" />
 
+    <!-- Sorted by the backend on updatedAtUtc — when the customer's upload actually moved the
+         order into this queue, which is more meaningful for triage than the original order date. -->
     <div v-else class="space-y-3">
       <button
         v-for="order in orders"
@@ -74,7 +90,8 @@ async function submit() {
         @click="open(order)"
       >
         <p class="truncate font-medium text-ink-900">{{ testNames(order.labTestIds) }}</p>
-        <p class="font-data mt-1 text-xs text-ink-400">{{ formatDate(orderCreatedAt(order)) }}</p>
+        <p class="font-data mt-1 text-xs text-ink-400">نتیجه در {{ formatDate(order.updatedAtUtc) }} بارگذاری شد</p>
+        <p v-if="order.basicInsurance !== 'None'" class="mt-1 text-xs text-ink-500">{{ basicInsuranceLabel(order.basicInsurance) }}</p>
         <p v-if="order.customerNote" class="mt-1.5 truncate text-sm text-ink-600">{{ order.customerNote }}</p>
       </button>
     </div>
@@ -85,8 +102,14 @@ async function submit() {
     <PageHeader :title="testNames(selected.labTestIds)" subtitle="بررسی نتیجه آزمایش و ثبت نظر تخصصی" />
 
     <div class="space-y-4">
-      <p class="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-        بک‌اند فعلاً اندپوینتی برای مشاهده فایل نتیجه بارگذاری‌شده در اختیار نمی‌گذارد؛ فقط یادداشت مشتری قابل مشاهده است.
+      <div class="flex items-center justify-between rounded-xl bg-primary-50 p-3">
+        <p class="text-sm text-primary-700">نتیجه آزمایش توسط مشتری بارگذاری شده است.</p>
+        <button type="button" class="text-sm font-medium text-primary-700 hover:underline" :disabled="viewingResult" @click="viewResult">
+          مشاهده جواب
+        </button>
+      </div>
+      <p v-if="selected.basicInsurance !== 'None'" class="text-sm text-ink-600">
+        بیمه پایه: <span class="text-ink-900">{{ basicInsuranceLabel(selected.basicInsurance) }}</span>
       </p>
       <p v-if="selected.customerNote" class="rounded-xl bg-ink-50 p-3 text-sm text-ink-600">{{ selected.customerNote }}</p>
       <p class="font-data text-xs text-ink-400">تاریخ ثبت سفارش: {{ formatDate(orderCreatedAt(selected)) }}</p>
