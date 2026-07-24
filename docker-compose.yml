@@ -1,0 +1,14 @@
+services:
+  prescription-frontend:
+    build:
+      context: .
+      args:
+        VITE_PRESCRIPTION_API_BASE_URL: ${VITE_PRESCRIPTION_API_BASE_URL:-}
+    container_name: prescription-frontend
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+    # If the Prescription.Api backend is defined in this same compose file (or joins this
+    # network externally), add it here so the frontend can reach it by service name, e.g.:
+    # depends_on:
+    #   - prescription-api
