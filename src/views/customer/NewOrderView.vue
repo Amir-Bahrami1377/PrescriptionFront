@@ -32,6 +32,7 @@ const supplementaryInsurance = ref('None')
 const isForThirdParty = ref(false)
 const thirdPartyNationalCode = ref('')
 const thirdPartyPhoneNumber = ref('')
+const requestsConsultation = ref(false)
 
 onMounted(async () => {
   try {
@@ -71,6 +72,7 @@ async function submit() {
           thirdParty: isForThirdParty.value
             ? { nationalCode: thirdPartyNationalCode.value, phoneNumber: thirdPartyPhoneNumber.value }
             : null,
+          requestsConsultation: requestsConsultation.value,
         },
         onUploadProgress,
       ),
@@ -119,6 +121,20 @@ async function submit() {
         <AppInput v-model="thirdPartyNationalCode" label="کد ملی فرد" dir="ltr" inputmode="numeric" placeholder="۱۰ رقم" />
         <AppInput v-model="thirdPartyPhoneNumber" label="شماره موبایل فرد" dir="ltr" placeholder="09xxxxxxxxx" />
       </div>
+    </div>
+
+    <div class="rounded-2xl border border-ink-100 bg-surface p-4">
+      <label class="flex cursor-pointer items-center gap-2.5">
+        <input
+          v-model="requestsConsultation"
+          type="checkbox"
+          class="size-4 rounded border-ink-300 text-primary-600 focus:ring-primary-500"
+        />
+        <span class="text-sm font-medium text-ink-800">درخواست مشاوره پزشک برای نتیجه آزمایش</span>
+      </label>
+      <p class="mt-2 text-xs text-ink-500">
+        در صورت انتخاب، پس از دریافت نتیجه آزمایش آن را برای پزشک بارگذاری می‌کنید و نظر تخصصی او را دریافت می‌کنید. هزینه ثابت مشاوره پزشک به هزینه ویزیت این سفارش اضافه می‌شود.
+      </p>
     </div>
 
     <AppInput v-model="note" as="textarea" label="یادداشت برای پزشک (اختیاری)" placeholder="توضیح علائم یا نکات لازم…" />

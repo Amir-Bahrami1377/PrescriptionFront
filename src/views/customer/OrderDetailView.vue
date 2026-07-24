@@ -90,7 +90,7 @@ async function payNow() {
 
   <div v-else-if="order" class="space-y-6">
     <div class="rounded-2xl border border-ink-100 bg-surface p-4">
-      <OrderTimeline :status="order.status" />
+      <OrderTimeline :status="order.status" :requests-consultation="order.requestsConsultation" />
     </div>
 
     <div class="rounded-2xl border border-ink-100 bg-surface p-4">
@@ -113,7 +113,13 @@ async function payNow() {
         <span class="text-ink-900">هزینه ویزیت</span>
         <span class="font-data text-ink-900">{{ formatRials(orderTotal(order)) }}</span>
       </div>
+      <p v-if="order.requestsConsultation" class="mt-1 text-xs text-ink-500">شامل هزینه مشاوره پزشک</p>
       <p v-if="order.hasResult" class="mt-3 rounded-xl bg-primary-50 p-3 text-sm text-primary-700">جواب آزمایش بارگذاری شده است.</p>
+    </div>
+
+    <div v-if="order.consultationOpinion" class="rounded-2xl border border-primary-100 bg-primary-50 p-4">
+      <h2 class="mb-2 font-bold text-primary-800">نظر تخصصی پزشک</h2>
+      <p class="text-sm text-primary-700">{{ order.consultationOpinion }}</p>
     </div>
 
     <div
@@ -141,17 +147,24 @@ async function payNow() {
       <p class="text-sm text-primary-800">شماره ارجاع نسخه: <span class="font-data font-semibold">{{ order.prescriptionReferenceNumber }}</span></p>
     </div>
 
+    <p v-if="statusInfo?.key === 'awaitingConsultationOpinion'" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+      نتیجه آزمایش شما دریافت شد و در انتظار نظر تخصصی پزشک است.
+    </p>
+
     <div class="space-y-3">
       <AppButton v-if="statusInfo?.key === 'pendingPayment'" block :loading="paying" @click="payNow">
         پرداخت آنلاین ({{ formatRials(orderTotal(order)) }})
       </AppButton>
 
-      <router-link v-if="['inProgress', 'completed'].includes(statusInfo?.key)" :to="{ name: 'upload-result' , params: { id: props.id } }">
-        <AppButton variant="secondary" block>{{ order.hasResult ? 'بارگذاری مجدد جواب آزمایش' : 'بارگذاری جواب آزمایش' }}</AppButton>
+      <router-link v-if="statusInfo?.key === 'awaitingTestResultUpload'" :to="{ name: 'upload-consultation-result', params: { id: props.id } }">
+        <AppButton block>بارگذاری نتیجه برای مشاوره</AppButton>
       </router-link>
 
-      <router-link v-if="statusInfo?.key === 'completed'" :to="{ name: 'consultation-request', params: { id: props.id } }">
-        <AppButton variant="secondary" block>درخواست مشاوره پزشک</AppButton>
+      <router-link
+        v-if="!order.requestsConsultation && ['inProgress', 'completed'].includes(statusInfo?.key)"
+        :to="{ name: 'upload-result', params: { id: props.id } }"
+      >
+        <AppButton variant="secondary" block>{{ order.hasResult ? 'بارگذاری مجدد جواب آزمایش' : 'بارگذاری جواب آزمایش' }}</AppButton>
       </router-link>
     </div>
   </div>

@@ -75,6 +75,7 @@ async function claim(order) {
               <p v-if="order.customerNote" class="mt-1.5 truncate text-sm text-ink-600">{{ order.customerNote }}</p>
               <p v-if="order.hasAttachment" class="mt-1 text-xs text-primary-600">فایل پیوست دارد</p>
               <p v-if="order.isForThirdParty" class="mt-1 text-xs text-ink-500">برای شخص دیگری</p>
+              <p v-if="order.requestsConsultation" class="mt-1 text-xs text-ink-500">درخواست مشاوره دارد</p>
             </div>
             <span
               v-if="claimMinutesLeft(order) !== null"
@@ -102,6 +103,7 @@ async function claim(order) {
             <p v-if="order.customerNote" class="mt-1.5 truncate text-sm text-ink-600">{{ order.customerNote }}</p>
             <p v-if="order.hasAttachment" class="mt-1 text-xs text-primary-600">فایل پیوست دارد</p>
             <p v-if="order.isForThirdParty" class="mt-1 text-xs text-ink-500">برای شخص دیگری</p>
+            <p v-if="order.requestsConsultation" class="mt-1 text-xs text-ink-500">درخواست مشاوره دارد</p>
           </div>
           <AppButton size="sm" :loading="claimingId === order.id" @click="claim(order)">درخواست بررسی</AppButton>
         </div>

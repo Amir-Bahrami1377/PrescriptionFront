@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import * as ordersApi from '@/api/ordersApi'
-import * as consultationApi from '@/api/consultationApi'
 import * as doctorApi from '@/api/doctorApi'
 import PageHeader from '@/components/common/PageHeader.vue'
 
@@ -12,7 +11,7 @@ onMounted(async () => {
   const [myPending, payments, consultations, fee] = await Promise.allSettled([
     ordersApi.listMyPendingReviews(),
     ordersApi.listPaymentQueue(),
-    consultationApi.listPendingConsultations(),
+    ordersApi.listAwaitingConsultationOpinion(),
     doctorApi.getMyFee(),
   ])
   if (myPending.status === 'fulfilled') counts.myPending = (myPending.value ?? []).length
@@ -33,7 +32,7 @@ const cards = [
   },
   { to: { name: 'payment-list' }, label: 'لیست پرداخت', desc: 'سفارش‌های تاییدشده در انتظار پرداخت مشتری', countKey: 'payment' },
   { to: { name: 'in-progress-list' }, label: 'در حال انجام', desc: 'سفارش‌های پرداخت‌شده برای تکمیل' },
-  { to: { name: 'consultation-queue' }, label: 'صف مشاوره', desc: 'درخواست‌های مشاوره در انتظار نظر شما', countKey: 'consultation' },
+  { to: { name: 'consultation-opinion-queue' }, label: 'صف نظر مشاوره', desc: 'نتیجه آزمایش بارگذاری‌شده در انتظار نظر تخصصی شماست', countKey: 'consultation' },
 ]
 </script>
 

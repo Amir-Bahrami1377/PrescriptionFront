@@ -22,8 +22,8 @@ async function submit() {
     return
   }
   try {
-    await run((onUploadProgress) => ordersApi.uploadTestResult(id, file.value, onUploadProgress))
-    toast.success('جواب آزمایش با موفقیت بارگذاری شد')
+    await run((onUploadProgress) => ordersApi.uploadConsultationResult(id, file.value, onUploadProgress))
+    toast.success('نتیجه آزمایش ثبت شد و برای پزشک ارسال شد')
     router.push({ name: 'order-detail', params: { id } })
   } catch (error) {
     toast.error(apiErrorMessage(error, 'بارگذاری فایل با خطا مواجه شد'))
@@ -32,11 +32,11 @@ async function submit() {
 </script>
 
 <template>
-  <PageHeader title="بارگذاری جواب آزمایش" subtitle="فایل جواب آزمایش خود را برای پزشک ارسال کنید" back />
+  <PageHeader title="بارگذاری نتیجه برای مشاوره" subtitle="نتیجه آزمایش خود را بارگذاری کنید تا پزشک نظر تخصصی خود را ثبت کند" back />
 
   <div class="space-y-6">
     <FileUploader v-model="file" />
     <p v-if="uploading" class="font-data text-xs text-primary-600">در حال ارسال… {{ progress }}٪</p>
-    <AppButton block :loading="uploading" @click="submit">ارسال جواب آزمایش</AppButton>
+    <AppButton block :loading="uploading" @click="submit">ارسال نتیجه آزمایش</AppButton>
   </div>
 </template>

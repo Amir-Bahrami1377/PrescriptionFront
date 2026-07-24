@@ -8,7 +8,10 @@ import axiosClient from './axiosClient'
  * rejects isForThirdParty=true without both a valid national code and phone number.
  * Response is { orderId, status }.
  */
-export function createOrder({ labTestIds, note, file, basicInsurance, supplementaryInsurance, thirdParty }, onUploadProgress) {
+export function createOrder(
+  { labTestIds, note, file, basicInsurance, supplementaryInsurance, thirdParty, requestsConsultation },
+  onUploadProgress,
+) {
   const form = new FormData()
   for (const id of labTestIds) form.append('labTestIds', id)
   if (note) form.append('note', note)
@@ -20,6 +23,7 @@ export function createOrder({ labTestIds, note, file, basicInsurance, supplement
     form.append('thirdPartyNationalCode', thirdParty.nationalCode)
     form.append('thirdPartyPhoneNumber', thirdParty.phoneNumber)
   }
+  if (requestsConsultation) form.append('requestsConsultation', 'true')
   return axiosClient
     .post('/api/orders', form, { headers: { 'Content-Type': 'multipart/form-data' }, onUploadProgress })
     .then((res) => res.data)
@@ -29,8 +33,12 @@ export function createOrder({ labTestIds, note, file, basicInsurance, supplement
  * Response shape verified against the backend: { id, labTestIds, priceInRials, status,
  * rejectionReason, prescriptionReferenceNumber, paymentReferenceId, hasResult, basicInsurance,
  * supplementaryInsurance, isForThirdParty, thirdPartyNationalCode, thirdPartyPhoneNumber,
- * createdAtUtc, completedAtUtc }. The third-party fields are only populated when the caller
- * is authorized to see them (the customer who created the order, or a reviewing doctor).
+ * requestsConsultation, consultationOpinion, createdAtUtc, completedAtUtc }. The third-party
+ * fields are only populated when the caller is authorized to see them (the customer who
+ * created the order, or a reviewing doctor). When requestsConsultation is true, price includes
+ * the doctor's consultation fee on top of their visit fee, and the order's post-payment path
+ * is AwaitingPayment -> AwaitingTestResultUpload -> AwaitingConsultationOpinion -> Completed
+ * instead of the normal AwaitingPayment -> InProgress -> Completed.
  */
 export function getOrder(id) {
   return axiosClient.get(`/api/orders/${id}`).then((res) => res.data)
@@ -93,4 +101,29 @@ export function claimOrder(id) {
 /** Orders this doctor completed review on, now paid and awaiting completion. */
 export function listInProgressOrders() {
   return axiosClient.get('/api/orders/mine/in-progress').then((res) => res.data)
+}
+
+/**
+ * Customer uploads their test result for a consultation order (ownership-checked).
+ * Transitions the order from AwaitingTestResultUpload to AwaitingConsultationOpinion.
+ */
+export function uploadConsultationResult(id, file, onUploadProgress) {
+  const form = new FormData()
+  form.append('file', file)
+  return axiosClient
+    .post(`/api/orders/${id}/consultation-result`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
+    })
+    .then((res) => res.data)
+}
+
+/** Doctor submits their opinion on a consultation order — this completes the order. */
+export function submitConsultationOpinion(id, opinion) {
+  return axiosClient.post(`/api/orders/${id}/consultation-opinion`, { opinion }).then((res) => res.data)
+}
+
+/** Shared queue: consultation orders whose test result was uploaded, awaiting a doctor's opinion. */
+export function listAwaitingConsultationOpinion() {
+  return axiosClient.get('/api/orders/awaiting-consultation-opinion').then((res) => res.data)
 }

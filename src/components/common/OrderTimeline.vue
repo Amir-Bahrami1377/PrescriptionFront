@@ -2,19 +2,32 @@
 import { computed } from 'vue'
 import { normalizeOrderStatus } from '@/composables/useOrderStatus'
 
-const props = defineProps({ status: { type: [String, Number], required: true } })
+const props = defineProps({
+  status: { type: [String, Number], required: true },
+  requestsConsultation: { type: Boolean, default: false },
+})
 
-const LINEAR_STEPS = [
+const BASE_STEPS = [
   { key: 'pendingDoctorReview', label: 'ثبت سفارش' },
   { key: 'pendingPayment', label: 'تایید پزشک' },
   { key: 'inProgress', label: 'پرداخت' },
-  { key: 'completed', label: 'انجام آزمایش' },
 ]
+
+// Consultation orders skip "InProgress" after payment and take two extra steps instead of
+// going straight to "انجام آزمایش".
+const LINEAR_STEPS = computed(() =>
+  props.requestsConsultation
+    ? [...BASE_STEPS, { key: 'awaitingTestResultUpload', label: 'بارگذاری نتیجه' }, { key: 'awaitingConsultationOpinion', label: 'نظر پزشک' }]
+    : [...BASE_STEPS, { key: 'completed', label: 'انجام آزمایش' }],
+)
 
 const info = computed(() => normalizeOrderStatus(props.status))
 const isRejected = computed(() => info.value.key === 'rejected')
 const currentIndex = computed(() => {
-  const idx = LINEAR_STEPS.findIndex((s) => s.key === info.value.key)
+  // Once the order is fully completed, treat every step (including the last) as done —
+  // there's no separate "completed" node in the consultation branch to land on.
+  if (info.value.key === 'completed') return LINEAR_STEPS.value.length
+  const idx = LINEAR_STEPS.value.findIndex((s) => s.key === info.value.key)
   return idx >= 0 ? idx : 0
 })
 

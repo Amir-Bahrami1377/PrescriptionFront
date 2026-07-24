@@ -10,7 +10,7 @@ const doctorNav = [
   { to: { name: 'pending-review' }, label: 'در انتظار بررسی' },
   { to: { name: 'payment-list' }, label: 'لیست پرداخت' },
   { to: { name: 'in-progress-list' }, label: 'در حال انجام' },
-  { to: { name: 'consultation-queue' }, label: 'صف مشاوره' },
+  { to: { name: 'consultation-opinion-queue' }, label: 'صف نظر مشاوره' },
   { to: { name: 'doctor-fee' }, label: 'هزینه ویزیت' },
 ]
 const adminNav = [

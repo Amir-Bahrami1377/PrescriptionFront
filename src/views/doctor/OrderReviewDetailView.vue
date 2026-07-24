@@ -75,6 +75,7 @@ async function submit() {
       <p class="font-data mt-3 text-xs text-ink-400">تاریخ ثبت: {{ formatDate(orderCreatedAt(order)) }}</p>
       <p v-if="order.customerNote" class="mt-3 rounded-xl bg-ink-50 p-3 text-sm text-ink-600">{{ order.customerNote }}</p>
       <p v-if="order.hasAttachment" class="mt-2 text-xs text-primary-600">مشتری فایلی پیوست کرده است.</p>
+      <p v-if="order.requestsConsultation" class="mt-2 text-xs text-primary-600">مشتری درخواست مشاوره پزشک هم داده است.</p>
     </div>
 
     <div
@@ -119,7 +120,11 @@ async function submit() {
         </button>
       </div>
 
-      <p v-if="decision === 'approve'" class="mb-2 text-xs text-ink-500">با تایید، هزینه ویزیت بر اساس تعرفه ثابت شما برای این سفارش ثبت می‌شود.</p>
+      <p v-if="decision === 'approve'" class="mb-2 text-xs text-ink-500">
+        با تایید، هزینه ویزیت بر اساس تعرفه ثابت شما برای این سفارش ثبت می‌شود{{
+          order.requestsConsultation ? '؛ از آنجا که مشتری درخواست مشاوره داده، هزینه مشاوره ثابت شما نیز به آن اضافه خواهد شد.' : '.'
+        }}
+      </p>
       <AppInput v-else v-model="rejectionReason" as="textarea" label="دلیل رد سفارش" placeholder="دلیل رد را برای مشتری توضیح دهید…" />
 
       <AppButton class="mt-4" block :variant="decision === 'reject' ? 'danger' : 'primary'" :loading="submitting" @click="submit">
