@@ -1,29 +1,36 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import * as catalogApi from '@/api/catalogApi'
 import { apiErrorMessage } from '@/lib/apiError'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import AppModal from '@/components/common/AppModal.vue'
+import DataGrid from '@/components/common/DataGrid.vue'
 
 const toast = useToast()
 const tests = ref([])
 const loading = ref(true)
-const creating = ref(false)
-const savingId = ref(null)
-const edits = reactive({})
+const search = ref('')
 
-const newTest = reactive({ name: '', description: '' })
+const columns = [
+  { key: 'name', label: 'نام آزمایش' },
+  { key: 'description', label: 'توضیحات' },
+]
+
+const filteredTests = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return tests.value
+  return tests.value.filter(
+    (t) => t.name?.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q),
+  )
+})
 
 async function load() {
   loading.value = true
   try {
     tests.value = (await catalogApi.listTests()) ?? []
-    for (const t of tests.value) {
-      edits[t.id] = { name: t.name, description: t.description ?? '', isActive: t.isActive ?? true }
-    }
   } catch {
     toast.error('دریافت فهرست آزمایش‌ها با خطا مواجه شد')
   } finally {
@@ -32,70 +39,123 @@ async function load() {
 }
 onMounted(load)
 
-async function createTest() {
-  if (!newTest.name.trim()) {
+// --- add / edit modal ---
+const modalOpen = ref(false)
+const modalMode = ref('create') // create | edit
+const saving = ref(false)
+const form = reactive({ id: null, name: '', description: '' })
+
+function openCreate() {
+  modalMode.value = 'create'
+  form.id = null
+  form.name = ''
+  form.description = ''
+  modalOpen.value = true
+}
+
+function openEdit(row) {
+  modalMode.value = 'edit'
+  form.id = row.id
+  form.name = row.name
+  form.description = row.description ?? ''
+  modalOpen.value = true
+}
+
+async function save() {
+  if (!form.name.trim()) {
     toast.warning('نام آزمایش را وارد کنید')
     return
   }
-  creating.value = true
+  saving.value = true
   try {
-    await catalogApi.createTest({ name: newTest.name.trim(), description: newTest.description.trim() || null })
-    newTest.name = ''
-    newTest.description = ''
-    toast.success('آزمایش جدید ثبت شد')
+    const payload = { name: form.name.trim(), description: form.description.trim() || null }
+    if (modalMode.value === 'create') {
+      await catalogApi.createTest(payload)
+      toast.success('آزمایش جدید ثبت شد')
+    } else {
+      // The list only ever returns active tests, so any row we edit here is active.
+      await catalogApi.updateTest(form.id, { ...payload, isActive: true })
+      toast.success('تغییرات ذخیره شد')
+    }
+    modalOpen.value = false
     await load()
   } catch (error) {
-    toast.error(apiErrorMessage(error, 'ثبت آزمایش با خطا مواجه شد'))
+    toast.error(apiErrorMessage(error, 'ذخیره آزمایش با خطا مواجه شد'))
   } finally {
-    creating.value = false
+    saving.value = false
   }
 }
 
-async function saveTest(id) {
-  savingId.value = id
+// --- delete confirm ---
+const deleteTarget = ref(null)
+const deleting = ref(false)
+
+async function doDelete() {
+  deleting.value = true
   try {
-    const payload = edits[id]
-    await catalogApi.updateTest(id, { name: payload.name, description: payload.description || null, isActive: payload.isActive })
-    toast.success('تغییرات ذخیره شد')
+    await catalogApi.deleteTest(deleteTarget.value.id)
+    toast.success('آزمایش حذف شد')
+    deleteTarget.value = null
+    await load()
   } catch (error) {
-    toast.error(apiErrorMessage(error, 'ذخیره تغییرات با خطا مواجه شد'))
+    toast.error(apiErrorMessage(error, 'حذف آزمایش با خطا مواجه شد'))
   } finally {
-    savingId.value = null
+    deleting.value = false
   }
 }
 </script>
 
 <template>
-  <PageHeader title="مدیریت کاتالوگ آزمایش‌ها" subtitle="کاتالوگ فقط برای انتخاب نوع آزمایش است؛ هزینه ویزیت را هر پزشک از پنل خودش تنظیم می‌کند." />
+  <PageHeader
+    title="مدیریت کاتالوگ آزمایش‌ها"
+    subtitle="کاتالوگ فقط برای انتخاب نوع آزمایش است؛ هزینه ویزیت را هر پزشک از پنل خودش تنظیم می‌کند."
+  />
 
-  <div class="mb-6 rounded-2xl border border-ink-100 bg-surface p-4">
-    <h2 class="mb-3 font-bold text-ink-900">افزودن آزمایش جدید</h2>
-    <div class="grid gap-3 sm:grid-cols-2">
-      <AppInput v-model="newTest.name" label="نام آزمایش" />
-      <AppInput v-model="newTest.description" label="توضیحات (اختیاری)" />
-    </div>
-    <AppButton class="mt-4" :loading="creating" @click="createTest">افزودن آزمایش</AppButton>
-  </div>
-
-  <div v-if="loading" class="space-y-3">
-    <div v-for="i in 3" :key="i" class="h-24 animate-pulse rounded-2xl bg-ink-50" />
-  </div>
-
-  <EmptyState v-else-if="!tests.length" title="آزمایشی در کاتالوگ ثبت نشده" />
-
-  <div v-else class="space-y-3">
-    <div v-for="test in tests" :key="test.id" class="rounded-2xl border border-ink-100 bg-surface p-4">
-      <div class="grid gap-3 sm:grid-cols-2">
-        <AppInput v-model="edits[test.id].name" label="نام" />
-        <AppInput v-model="edits[test.id].description" label="توضیحات" />
+  <DataGrid
+    :columns="columns"
+    :rows="filteredTests"
+    :loading="loading"
+    empty-text="آزمایشی یافت نشد"
+  >
+    <template #toolbar>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="sm:w-72">
+          <AppInput v-model="search" placeholder="جستجوی نام یا توضیحات…" />
+        </div>
+        <AppButton @click="openCreate">افزودن آزمایش</AppButton>
       </div>
-      <div class="mt-3 flex items-center justify-between">
-        <label class="flex items-center gap-2 text-sm text-ink-600">
-          <input v-model="edits[test.id].isActive" type="checkbox" class="size-4 rounded border-ink-300 text-primary-600 focus:ring-primary-500" />
-          فعال در کاتالوگ
-        </label>
-        <AppButton size="sm" :loading="savingId === test.id" @click="saveTest(test.id)">ذخیره تغییرات</AppButton>
-      </div>
+    </template>
+
+    <template #cell-description="{ value }">
+      <span :class="value ? 'text-ink-600' : 'text-ink-300'">{{ value || '—' }}</span>
+    </template>
+
+    <template #actions="{ row }">
+      <AppButton variant="ghost" size="sm" @click="openEdit(row)">ویرایش</AppButton>
+      <AppButton variant="ghost" size="sm" class="!text-brick-600 hover:!bg-brick-50" @click="deleteTarget = row">حذف</AppButton>
+    </template>
+  </DataGrid>
+
+  <!-- add / edit -->
+  <AppModal v-model="modalOpen" :title="modalMode === 'create' ? 'افزودن آزمایش جدید' : 'ویرایش آزمایش'">
+    <div class="space-y-4">
+      <AppInput v-model="form.name" label="نام آزمایش" />
+      <AppInput v-model="form.description" as="textarea" :rows="3" label="توضیحات (اختیاری)" />
     </div>
-  </div>
+    <template #footer>
+      <AppButton variant="ghost" @click="modalOpen = false">انصراف</AppButton>
+      <AppButton :loading="saving" @click="save">{{ modalMode === 'create' ? 'افزودن' : 'ذخیره تغییرات' }}</AppButton>
+    </template>
+  </AppModal>
+
+  <!-- delete confirm -->
+  <AppModal :model-value="!!deleteTarget" title="حذف آزمایش" @update:model-value="deleteTarget = null">
+    <p class="text-sm text-ink-600">
+      آیا از حذف «<span class="font-medium text-ink-900">{{ deleteTarget?.name }}</span>» مطمئن هستید؟ این عمل قابل بازگشت نیست.
+    </p>
+    <template #footer>
+      <AppButton variant="ghost" @click="deleteTarget = null">انصراف</AppButton>
+      <AppButton variant="danger" :loading="deleting" @click="doDelete">حذف</AppButton>
+    </template>
+  </AppModal>
 </template>

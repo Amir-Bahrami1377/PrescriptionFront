@@ -9,6 +9,7 @@ defineProps({
   as: { type: String, default: 'input' }, // input | textarea
   rows: { type: Number, default: 3 },
   dir: { type: String, default: undefined },
+  disabled: { type: Boolean, default: false },
 })
 defineEmits(['update:modelValue'])
 </script>
@@ -22,7 +23,8 @@ defineEmits(['update:modelValue'])
       :placeholder="placeholder"
       :rows="rows"
       :dir="dir"
-      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+      :disabled="disabled"
+      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400"
       :class="error ? 'border-brick-400' : 'border-ink-100'"
       @input="$emit('update:modelValue', $event.target.value)"
     />
@@ -32,7 +34,8 @@ defineEmits(['update:modelValue'])
       :value="modelValue"
       :placeholder="placeholder"
       :dir="dir"
-      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+      :disabled="disabled"
+      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400"
       :class="error ? 'border-brick-400' : 'border-ink-100'"
       @input="$emit('update:modelValue', $event.target.value)"
     />

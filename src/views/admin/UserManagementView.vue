@@ -1,29 +1,47 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import * as adminApi from '@/api/adminApi'
 import { apiErrorMessage } from '@/lib/apiError'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import AppModal from '@/components/common/AppModal.vue'
+import DataGrid from '@/components/common/DataGrid.vue'
 
 const toast = useToast()
 
-const newUser = reactive({ phoneNumber: '', role: 'Doctor' })
-const creating = ref(false)
-
-const roleFilter = ref('')
+const roleLabels = { Doctor: 'پزشک', Admin: 'مدیر', Customer: 'مشتری' }
+const roleClass = {
+  Admin: 'bg-amber-50 text-amber-700',
+  Doctor: 'bg-primary-50 text-primary-700',
+  Customer: 'bg-ink-100 text-ink-600',
+}
 const filters = [
   { value: '', label: 'همه' },
   { value: 'Doctor', label: 'پزشک' },
   { value: 'Admin', label: 'مدیر' },
   { value: 'Customer', label: 'مشتری' },
 ]
-const roleLabels = { Doctor: 'پزشک', Admin: 'مدیر', Customer: 'مشتری' }
+
+const columns = [
+  { key: 'phoneNumber', label: 'شماره موبایل' },
+  { key: 'fullName', label: 'نام و نام خانوادگی' },
+  { key: 'role', label: 'نقش' },
+]
 
 const users = ref([])
 const loading = ref(true)
+const roleFilter = ref('')
+const search = ref('')
+
+const filteredUsers = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return users.value
+  return users.value.filter(
+    (u) => u.phoneNumber?.includes(q) || u.fullName?.toLowerCase().includes(q),
+  )
+})
 
 async function load() {
   loading.value = true
@@ -42,21 +60,60 @@ function selectFilter(value) {
   load()
 }
 
-async function createOrUpdate() {
-  if (!newUser.phoneNumber.trim()) {
-    toast.warning('شماره موبایل را وارد کنید')
+// --- add / edit modal (backend upserts staff role by phone number) ---
+const modalOpen = ref(false)
+const modalMode = ref('create') // create | edit
+const saving = ref(false)
+const form = reactive({ phoneNumber: '', role: 'Doctor' })
+
+function openCreate() {
+  modalMode.value = 'create'
+  form.phoneNumber = ''
+  form.role = 'Doctor'
+  modalOpen.value = true
+}
+
+function openEdit(row) {
+  modalMode.value = 'edit'
+  form.phoneNumber = row.phoneNumber
+  // Editing means promoting/switching staff role; default staff picks when the current role is Customer.
+  form.role = row.role === 'Admin' ? 'Admin' : 'Doctor'
+  modalOpen.value = true
+}
+
+async function save() {
+  if (modalMode.value === 'create' && !/^09\d{9}$/.test(form.phoneNumber.trim())) {
+    toast.warning('شماره موبایل معتبر نیست')
     return
   }
-  creating.value = true
+  saving.value = true
   try {
-    await adminApi.createOrUpdateStaffUser({ phoneNumber: newUser.phoneNumber.trim(), role: newUser.role })
+    await adminApi.createOrUpdateStaffUser({ phoneNumber: form.phoneNumber.trim(), role: form.role })
     toast.success('نقش کاربر با موفقیت ثبت شد')
-    newUser.phoneNumber = ''
+    modalOpen.value = false
     await load()
   } catch (error) {
     toast.error(apiErrorMessage(error, 'ثبت کاربر با خطا مواجه شد'))
   } finally {
-    creating.value = false
+    saving.value = false
+  }
+}
+
+// --- delete confirm ---
+const deleteTarget = ref(null)
+const deleting = ref(false)
+
+async function doDelete() {
+  deleting.value = true
+  try {
+    await adminApi.deleteUser(deleteTarget.value.id)
+    toast.success('کاربر حذف شد')
+    deleteTarget.value = null
+    await load()
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'حذف کاربر با خطا مواجه شد'))
+  } finally {
+    deleting.value = false
   }
 }
 </script>
@@ -64,14 +121,66 @@ async function createOrUpdate() {
 <template>
   <PageHeader title="مدیریت کاربران" subtitle="برای شماره‌ای که قبلاً ثبت‌نام کرده، نقش جدید جایگزین نقش قبلی می‌شود" />
 
-  <div class="mb-6 rounded-2xl border border-ink-100 bg-surface p-4">
-    <h2 class="mb-3 font-bold text-ink-900">افزودن پزشک یا مدیر</h2>
-    <div class="grid gap-3 sm:grid-cols-3">
-      <AppInput v-model="newUser.phoneNumber" label="شماره موبایل" dir="ltr" placeholder="09xxxxxxxxx" />
+  <DataGrid :columns="columns" :rows="filteredUsers" :loading="loading" empty-text="کاربری یافت نشد">
+    <template #toolbar>
+      <div class="space-y-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="sm:w-72">
+            <AppInput v-model="search" placeholder="جستجوی شماره یا نام…" dir="rtl" />
+          </div>
+          <AppButton @click="openCreate">افزودن پزشک یا مدیر</AppButton>
+        </div>
+
+        <div class="flex gap-1.5 overflow-x-auto">
+          <button
+            v-for="f in filters"
+            :key="f.value"
+            type="button"
+            class="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors"
+            :class="roleFilter === f.value ? 'bg-primary-600 text-white' : 'bg-ink-50 text-ink-600 hover:bg-ink-100'"
+            @click="selectFilter(f.value)"
+          >
+            {{ f.label }}
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <template #cell-phoneNumber="{ value }">
+      <span class="font-data" dir="ltr">{{ value }}</span>
+    </template>
+
+    <template #cell-fullName="{ value }">
+      <span :class="value ? 'text-ink-800' : 'text-ink-300'">{{ value || '—' }}</span>
+    </template>
+
+    <template #cell-role="{ value }">
+      <span class="rounded-full px-3 py-1 text-xs font-medium" :class="roleClass[value] ?? 'bg-ink-100 text-ink-600'">
+        {{ roleLabels[value] ?? value }}
+      </span>
+    </template>
+
+    <template #actions="{ row }">
+      <AppButton variant="ghost" size="sm" @click="openEdit(row)">ویرایش نقش</AppButton>
+      <AppButton variant="ghost" size="sm" class="!text-brick-600 hover:!bg-brick-50" @click="deleteTarget = row">حذف</AppButton>
+    </template>
+  </DataGrid>
+
+  <!-- add / edit -->
+  <AppModal v-model="modalOpen" :title="modalMode === 'create' ? 'افزودن پزشک یا مدیر' : 'ویرایش نقش کاربر'">
+    <div class="space-y-4">
+      <AppInput
+        v-model="form.phoneNumber"
+        label="شماره موبایل"
+        dir="ltr"
+        placeholder="09xxxxxxxxx"
+        :disabled="modalMode === 'edit'"
+        :hint="modalMode === 'edit' ? 'شماره موبایل قابل تغییر نیست' : ''"
+      />
       <label class="block">
         <span class="mb-1.5 block text-sm font-medium text-ink-700">نقش</span>
         <select
-          v-model="newUser.role"
+          v-model="form.role"
           class="w-full rounded-xl border border-ink-100 bg-surface px-3.5 py-2.5 text-ink-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="Doctor">پزشک</option>
@@ -79,41 +188,22 @@ async function createOrUpdate() {
         </select>
       </label>
     </div>
-    <AppButton class="mt-4" :loading="creating" @click="createOrUpdate">ثبت کاربر</AppButton>
-  </div>
+    <template #footer>
+      <AppButton variant="ghost" @click="modalOpen = false">انصراف</AppButton>
+      <AppButton :loading="saving" @click="save">{{ modalMode === 'create' ? 'ثبت کاربر' : 'ذخیره نقش' }}</AppButton>
+    </template>
+  </AppModal>
 
-  <div class="mb-4 flex gap-1.5 overflow-x-auto">
-    <button
-      v-for="f in filters"
-      :key="f.value"
-      type="button"
-      class="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors"
-      :class="roleFilter === f.value ? 'bg-primary-600 text-white' : 'bg-ink-50 text-ink-600 hover:bg-ink-100'"
-      @click="selectFilter(f.value)"
-    >
-      {{ f.label }}
-    </button>
-  </div>
-
-  <div v-if="loading" class="space-y-3">
-    <div v-for="i in 3" :key="i" class="h-16 animate-pulse rounded-2xl bg-ink-50" />
-  </div>
-
-  <EmptyState v-else-if="!users.length" title="کاربری یافت نشد" />
-
-  <div v-else class="space-y-2">
-    <div
-      v-for="user in users"
-      :key="user.id ?? user.phoneNumber"
-      class="flex items-center justify-between rounded-2xl border border-ink-100 bg-surface p-4"
-    >
-      <div>
-        <p class="font-data font-medium text-ink-900" dir="ltr">{{ user.phoneNumber }}</p>
-        <p v-if="user.fullName" class="mt-0.5 text-sm text-ink-500">{{ user.fullName }}</p>
-      </div>
-      <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
-        {{ roleLabels[user.role] ?? user.role }}
-      </span>
-    </div>
-  </div>
+  <!-- delete confirm -->
+  <AppModal :model-value="!!deleteTarget" title="حذف کاربر" @update:model-value="deleteTarget = null">
+    <p class="text-sm text-ink-600">
+      آیا از حذف کاربر با شماره
+      <span class="font-data font-medium text-ink-900" dir="ltr">{{ deleteTarget?.phoneNumber }}</span>
+      مطمئن هستید؟ این عمل قابل بازگشت نیست.
+    </p>
+    <template #footer>
+      <AppButton variant="ghost" @click="deleteTarget = null">انصراف</AppButton>
+      <AppButton variant="danger" :loading="deleting" @click="doDelete">حذف</AppButton>
+    </template>
+  </AppModal>
 </template>

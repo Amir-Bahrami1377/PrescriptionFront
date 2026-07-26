@@ -11,3 +11,12 @@ export function createTest({ name, description }) {
 export function updateTest(id, { name, description, isActive }) {
   return axiosClient.put(`/api/catalog/tests/${id}`, { name, description, isActive }).then((res) => res.data)
 }
+
+/**
+ * The list endpoint only ever returns active tests, so deactivating a test (updateTest with
+ * isActive:false) already hides it from the catalog. This hard-delete is the conventional
+ * DELETE the admin grid's delete button calls — the backend endpoint is expected to be added.
+ */
+export function deleteTest(id) {
+  return axiosClient.delete(`/api/catalog/tests/${id}`).then((res) => res.data)
+}
