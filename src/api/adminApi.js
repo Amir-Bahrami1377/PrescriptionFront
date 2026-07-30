@@ -12,10 +12,7 @@ export function createOrUpdateStaffUser({ phoneNumber, role }) {
   return axiosClient.post('/api/admin/users', { phoneNumber, role }).then((res) => res.data)
 }
 
-/**
- * Conventional hard-delete the admin grid's delete button calls — the backend endpoint is
- * expected to be added (currently returns 404).
- */
+/** Hard-delete, behind the admin grid's delete button. */
 export function deleteUser(id) {
   return axiosClient.delete(`/api/admin/users/${id}`).then((res) => res.data)
 }
