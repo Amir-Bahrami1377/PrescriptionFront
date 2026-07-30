@@ -15,13 +15,23 @@ const { ensureLoaded, testNames } = useTestCatalog()
 const orders = ref([])
 const loading = ref(true)
 const completingId = ref(null)
+const savingRefId = ref(null)
 const viewingResultId = ref(null)
 const referenceInputs = reactive({})
+// Tracks which code is currently persisted per order, so the hint can confirm it stuck and
+// complete() doesn't re-send an unchanged value. Seeded from the list, updated on save.
+const savedRefs = reactive({})
 
 onMounted(async () => {
   try {
     const [list] = await Promise.all([ordersApi.listInProgressOrders(), ensureLoaded()])
     orders.value = list ?? []
+    for (const order of orders.value) {
+      if (order.prescriptionReferenceNumber) {
+        referenceInputs[order.id] = order.prescriptionReferenceNumber
+        savedRefs[order.id] = order.prescriptionReferenceNumber
+      }
+    }
   } catch (error) {
     toast.error(apiErrorMessage(error, 'دریافت سفارش‌های در حال انجام با خطا مواجه شد'))
   } finally {
@@ -29,16 +39,46 @@ onMounted(async () => {
   }
 })
 
-async function complete(id) {
-  completingId.value = id
+/**
+ * Registering the code stays separate from finishing the order: the customer needs it to go and
+ * have the test done, which happens while the order is still here.
+ */
+async function saveReference(id) {
+  const reference = referenceInputs[id]?.trim()
+  if (!reference) {
+    toast.warning('کد رهگیری را وارد کنید')
+    return
+  }
+  savingRefId.value = id
   try {
-    const reference = referenceInputs[id]?.trim()
-    if (reference) await ordersApi.attachPrescriptionReference(id, reference)
-    await ordersApi.completeOrder(id)
-    orders.value = orders.value.filter((o) => o.id !== id)
-    toast.success('سفارش تکمیل شد')
+    await ordersApi.attachPrescriptionReference(id, reference)
+    savedRefs[id] = reference
+    toast.success('کد رهگیری ثبت شد و از این پس برای مشتری نمایش داده می‌شود')
   } catch (error) {
-    toast.error(apiErrorMessage(error, 'تکمیل سفارش با خطا مواجه شد'))
+    toast.error(apiErrorMessage(error, 'ثبت کد رهگیری با خطا مواجه شد'))
+  } finally {
+    savingRefId.value = null
+  }
+}
+
+/**
+ * The same endpoint ends the doctor's part either way — it closes a plain order outright, but
+ * hands a consultation order to the customer to upload their result, so the wording differs.
+ */
+async function finishWork(order) {
+  completingId.value = order.id
+  try {
+    const reference = referenceInputs[order.id]?.trim()
+    if (reference && savedRefs[order.id] !== reference) await ordersApi.attachPrescriptionReference(order.id, reference)
+    await ordersApi.completeOrder(order.id)
+    orders.value = orders.value.filter((o) => o.id !== order.id)
+    toast.success(
+      order.requestsConsultation
+        ? 'کار شما ثبت شد؛ سفارش برای بارگذاری نتیجه به مشتری منتقل شد'
+        : 'سفارش تکمیل شد',
+    )
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'ثبت پایان کار با خطا مواجه شد'))
   } finally {
     completingId.value = null
   }
@@ -71,13 +111,13 @@ async function viewResult(id) {
       <p class="truncate font-medium text-ink-900">{{ testNames(order.labTestIds) }}</p>
       <p class="font-data mt-1 text-xs text-ink-400">{{ formatDate(orderCreatedAt(order)) }}</p>
       <p class="font-data mt-1 text-sm font-medium text-ink-700">{{ formatRials(orderTotal(order)) }}</p>
-      <p v-if="order.hasResult === false" class="mt-2 text-xs text-amber-700">
-        تا زمانی که مشتری جواب آزمایش را بارگذاری نکند، این سفارش قابل تکمیل نیست.
+      <p v-if="order.requestsConsultation" class="mt-2 text-xs text-primary-600">
+        این سفارش درخواست مشاوره دارد؛ با ثبت پایان کار، نوبت بارگذاری نتیجه به مشتری می‌رسد.
       </p>
       <button
-        v-else-if="order.hasResult"
+        v-if="order.hasResult"
         type="button"
-        class="mt-2 text-xs font-medium text-primary-600 hover:underline"
+        class="mt-2 block text-xs font-medium text-primary-600 hover:underline"
         :disabled="viewingResultId === order.id"
         @click="viewResult(order.id)"
       >
@@ -87,10 +127,19 @@ async function viewResult(id) {
       <AppInput
         v-model="referenceInputs[order.id]"
         class="mt-3"
-        label="شماره ارجاع / لینک نسخه (اختیاری)"
+        label="کد رهگیری نسخه"
         placeholder="شماره ارجاع از سامانه نسخه‌نویسی"
+        :hint="savedRefs[order.id] ? 'ثبت شد و برای مشتری نمایش داده می‌شود' : 'پس از ثبت، مشتری این کد را می‌بیند و می‌تواند آزمایش را انجام دهد'"
       />
-      <AppButton class="mt-3" size="sm" :loading="completingId === order.id" @click="complete(order.id)">تکمیل سفارش</AppButton>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <AppButton variant="secondary" size="sm" :loading="savingRefId === order.id" @click="saveReference(order.id)">
+          ثبت کد رهگیری
+        </AppButton>
+        <AppButton size="sm" :loading="completingId === order.id" @click="finishWork(order)">
+          {{ order.requestsConsultation ? 'پایان کار پزشک' : 'تکمیل سفارش' }}
+        </AppButton>
+      </div>
     </div>
   </div>
 </template>

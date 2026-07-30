@@ -13,8 +13,9 @@ const BASE_STEPS = [
   { key: 'inProgress', label: 'پرداخت' },
 ]
 
-// Consultation orders skip "InProgress" after payment and take two extra steps instead of
-// going straight to "انجام آزمایش".
+// Both kinds of order run through the same first three steps — the split happens when the
+// doctor finishes: a plain order completes, a consultation order takes two extra steps
+// (customer uploads the result, then the doctor gives an opinion) before it completes.
 const LINEAR_STEPS = computed(() =>
   props.requestsConsultation
     ? [...BASE_STEPS, { key: 'awaitingTestResultUpload', label: 'بارگذاری نتیجه' }, { key: 'awaitingConsultationOpinion', label: 'نظر پزشک' }]
@@ -46,10 +47,14 @@ function nodeTone(index) {
 </script>
 
 <template>
-  <div class="overflow-x-auto">
+  <!-- overflow-y must be pinned: leaving it at the default makes it compute to `auto` alongside
+       overflow-x, and a sub-pixel of label overflow then adds a stray vertical scrollbar. -->
+  <div class="overflow-x-auto overflow-y-hidden pb-1">
+    <!-- Nodes keep a fixed width so the labels stay readable; the pulse connectors flex to fill
+         whatever is left, which keeps the five-step consultation track inside the card. -->
     <div class="flex min-w-max items-start" dir="ltr">
       <template v-for="(step, index) in isRejected ? LINEAR_STEPS.slice(0, 2) : LINEAR_STEPS" :key="step.key">
-        <div class="flex flex-col items-center" style="width: 84px">
+        <div class="flex w-12 shrink-0 flex-col items-center sm:w-16">
           <span
             class="flex size-8 items-center justify-center rounded-full ring-4 ring-paper"
             :class="{
@@ -67,7 +72,7 @@ function nodeTone(index) {
           </span>
           <span
             dir="rtl"
-            class="mt-2 text-center text-xs"
+            class="mt-2 text-center text-[10px] leading-tight text-balance sm:text-[11px]"
             :class="nodeTone(index) === 'idle' ? 'text-ink-400' : 'text-ink-700 font-medium'"
           >
             {{ index === 1 && isRejected ? 'رد شده توسط پزشک' : step.label }}
@@ -76,13 +81,13 @@ function nodeTone(index) {
 
         <svg
           v-if="index < (isRejected ? 1 : LINEAR_STEPS.length - 1)"
-          class="mt-4 h-6 shrink-0"
-          width="56"
-          viewBox="0 0 56 24"
+          class="mt-4 h-6 w-2 flex-1"
+          viewBox="0 0 32 24"
+          preserveAspectRatio="none"
           fill="none"
         >
           <path
-            d="M0 12H16L20 3L27 21L32 5L36 12H56"
+            d="M0 12H6L9 3L14 21L18 5L21 12H32"
             :class="{
               'stroke-primary-500': segmentTone(index) === 'done',
               'stroke-amber-500': segmentTone(index) === 'active',
@@ -92,6 +97,7 @@ function nodeTone(index) {
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
+            vector-effect="non-scaling-stroke"
           />
         </svg>
       </template>

@@ -1,11 +1,8 @@
 /**
- * The backend doesn't publish an order-status enum/schema. Confirmed live against the API:
- * "PendingDoctorApproval", "Rejected", "AwaitingPayment", "AwaitingConsultationOpinion" (the
- * last from a 409 transition-error message). "AwaitingTestResultUpload" is not yet directly
- * observed (blocked by the sandboxed payment gateway) but is given verbatim in the backend's
- * own change description and follows the exact same naming convention as the confirmed ones.
- * The plain "paid, doctor doing the work" status for non-consultation orders was never
- * directly observed either — "InProgress" here is still a best-effort guess.
+ * The backend doesn't publish an order-status enum/schema, but every value below has now been
+ * observed directly on a live order: PendingDoctorApproval, Rejected, AwaitingPayment,
+ * InProgress, AwaitingTestResultUpload, AwaitingConsultationOpinion and Completed — walked
+ * end to end for both a plain and a consultation order.
  * Unrecognized values still render — as a neutral badge showing the raw value — instead
  * of breaking the page.
  */
