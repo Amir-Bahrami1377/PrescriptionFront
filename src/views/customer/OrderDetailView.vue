@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useOrdersStore } from '@/stores/ordersStore'
 import * as ordersApi from '@/api/ordersApi'
@@ -14,6 +15,7 @@ import AppButton from '@/components/common/AppButton.vue'
 import { formatDate, formatRials, orderCreatedAt, orderTotal } from '@/lib/format'
 
 const props = defineProps({ id: { type: String, required: true } })
+const router = useRouter()
 const toast = useToast()
 const ordersStore = useOrdersStore()
 const { ensureLoaded, testName } = useTestCatalog()
@@ -70,9 +72,26 @@ async function payNow() {
   paying.value = true
   try {
     const result = await ordersApi.initiatePayment(props.id)
-    const url = result?.paymentUrl ?? result?.url ?? result?.redirectUrl
-    if (url) window.location.href = url
-    else toast.error('لینک پرداخت دریافت نشد')
+    const url = result?.paymentRedirectUrl ?? result?.paymentUrl ?? result?.url ?? result?.redirectUrl
+    if (!url) {
+      toast.error('لینک پرداخت دریافت نشد')
+      return
+    }
+
+    // TEMPORARY — paired with the backend's local payment bypass. The bypass hands back this
+    // API's own callback URL, and that endpoint replies with JSON instead of redirecting, so
+    // sending the browser there would strand the customer on raw JSON. Call it through the dev
+    // proxy instead and move to the return page ourselves. A real gateway URL (zarinpal.com)
+    // has no /payment/callback path, so it still gets a full browser redirect.
+    // Remove once the backend redirects to {frontend}/payment/return?orderId=…
+    if (url.includes('/payment/callback')) {
+      const { pathname, search } = new URL(url, window.location.origin)
+      await fetch(pathname + search)
+      router.push({ name: 'payment-return', query: { orderId: props.id } })
+      return
+    }
+
+    window.location.href = url
   } catch (error) {
     toast.error(apiErrorMessage(error, 'شروع فرآیند پرداخت با خطا مواجه شد'))
   } finally {
