@@ -11,7 +11,7 @@ export function homeRouteForRole(role) {
 export function useAuth() {
   const store = useAuthStore()
   const router = useRouter()
-  const { role, isAuthenticated, isProfileComplete, phoneNumber } = storeToRefs(store)
+  const { role, isAuthenticated, isProfileComplete, phoneNumber, isSpecialPatient } = storeToRefs(store)
 
   async function verifyAndRoute(code) {
     await store.verifyOtp(code)
@@ -37,6 +37,7 @@ export function useAuth() {
     isAuthenticated,
     isProfileComplete,
     phoneNumber,
+    isSpecialPatient,
     requestOtp: store.requestOtp,
     verifyAndRoute,
     completeProfileAndRoute,

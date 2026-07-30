@@ -11,7 +11,9 @@ const doctorNav = [
   { to: { name: 'payment-list' }, label: 'لیست پرداخت' },
   { to: { name: 'in-progress-list' }, label: 'در حال انجام' },
   { to: { name: 'consultation-opinion-queue' }, label: 'صف نظر مشاوره' },
-  { to: { name: 'doctor-fee' }, label: 'هزینه ویزیت' },
+  { to: { name: 'renewal-review-queue' }, label: 'صف تمدید نسخه' },
+  { to: { name: 'renewal-in-progress' }, label: 'تمدیدهای در حال انجام' },
+  { to: { name: 'doctor-fee' }, label: 'تعرفه‌ها' },
 ]
 const adminNav = [
   { to: { name: 'admin-catalog' }, label: 'مدیریت کاتالوگ آزمایش‌ها' },

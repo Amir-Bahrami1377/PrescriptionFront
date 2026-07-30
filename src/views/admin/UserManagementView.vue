@@ -28,6 +28,7 @@ const columns = [
   { key: 'phoneNumber', label: 'شماره موبایل' },
   { key: 'fullName', label: 'نام و نام خانوادگی' },
   { key: 'role', label: 'نقش' },
+  { key: 'isSpecialPatient', label: 'بیمار ویژه' },
 ]
 
 const users = ref([])
@@ -99,6 +100,26 @@ async function save() {
   }
 }
 
+/**
+ * Opening renewals takes effect straight away — the backend authorizes each renewal call against
+ * the database, so the patient doesn't have to sign in again for the change to apply.
+ */
+const togglingId = ref(null)
+
+async function toggleSpecialPatient(row) {
+  togglingId.value = row.id
+  const next = !row.isSpecialPatient
+  try {
+    await adminApi.setSpecialPatient(row.id, next)
+    row.isSpecialPatient = next
+    toast.success(next ? 'دسترسی تمدید نسخه فعال شد' : 'دسترسی تمدید نسخه لغو شد')
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'تغییر دسترسی تمدید نسخه با خطا مواجه شد'))
+  } finally {
+    togglingId.value = null
+  }
+}
+
 // --- delete confirm ---
 const deleteTarget = ref(null)
 const deleting = ref(false)
@@ -158,6 +179,20 @@ async function doDelete() {
       <span class="rounded-full px-3 py-1 text-xs font-medium" :class="roleClass[value] ?? 'bg-ink-100 text-ink-600'">
         {{ roleLabels[value] ?? value }}
       </span>
+    </template>
+
+    <template #cell-isSpecialPatient="{ row }">
+      <span v-if="row.role !== 'Customer'" class="text-ink-300">—</span>
+      <button
+        v-else
+        type="button"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50"
+        :class="row.isSpecialPatient ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' : 'bg-ink-100 text-ink-500 hover:bg-ink-200'"
+        :disabled="togglingId === row.id"
+        @click="toggleSpecialPatient(row)"
+      >
+        {{ row.isSpecialPatient ? 'فعال' : 'غیرفعال' }}
+      </button>
     </template>
 
     <template #actions="{ row }">

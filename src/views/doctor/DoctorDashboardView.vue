@@ -1,22 +1,27 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import * as ordersApi from '@/api/ordersApi'
+import * as renewalsApi from '@/api/renewalsApi'
 import * as doctorApi from '@/api/doctorApi'
 import PageHeader from '@/components/common/PageHeader.vue'
 
-const counts = reactive({ myPending: null, payment: null, consultation: null })
+const counts = reactive({ myPending: null, payment: null, consultation: null, renewal: null, renewalInProgress: null })
 const feeMissing = ref(false)
 
 onMounted(async () => {
-  const [myPending, payments, consultations, fee] = await Promise.allSettled([
+  const [myPending, payments, consultations, renewals, renewalsInProgress, fee] = await Promise.allSettled([
     ordersApi.listMyPendingReviews(),
     ordersApi.listPaymentQueue(),
     ordersApi.listAwaitingConsultationOpinion(),
+    renewalsApi.listPendingRenewals(),
+    renewalsApi.listInProgressRenewals(),
     doctorApi.getMyFee(),
   ])
   if (myPending.status === 'fulfilled') counts.myPending = (myPending.value ?? []).length
   if (payments.status === 'fulfilled') counts.payment = (payments.value ?? []).length
   if (consultations.status === 'fulfilled') counts.consultation = (consultations.value ?? []).length
+  if (renewals.status === 'fulfilled') counts.renewal = (renewals.value ?? []).length
+  if (renewalsInProgress.status === 'fulfilled') counts.renewalInProgress = (renewalsInProgress.value ?? []).length
   if (fee.status === 'fulfilled') {
     const feeInRials = fee.value && typeof fee.value === 'object' ? fee.value.feeInRials : fee.value
     feeMissing.value = feeInRials === null || feeInRials === undefined
@@ -33,6 +38,13 @@ const cards = [
   { to: { name: 'payment-list' }, label: 'لیست پرداخت', desc: 'سفارش‌های تاییدشده در انتظار پرداخت مشتری', countKey: 'payment' },
   { to: { name: 'in-progress-list' }, label: 'در حال انجام', desc: 'سفارش‌های پرداخت‌شده برای تکمیل' },
   { to: { name: 'consultation-opinion-queue' }, label: 'صف نظر مشاوره', desc: 'نتیجه آزمایش بارگذاری‌شده در انتظار نظر تخصصی شماست', countKey: 'consultation' },
+  { to: { name: 'renewal-review-queue' }, label: 'صف تمدید نسخه', desc: 'درخواست‌های تمدید نسخه بیماران ویژه در انتظار بررسی', countKey: 'renewal' },
+  {
+    to: { name: 'renewal-in-progress' },
+    label: 'تمدیدهای در حال انجام',
+    desc: 'تمدیدهای پرداخت‌شده که منتظر صدور نسخه جدید هستند',
+    countKey: 'renewalInProgress',
+  },
 ]
 </script>
 

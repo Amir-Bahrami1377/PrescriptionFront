@@ -43,6 +43,15 @@ export function readRoleClaim(claims) {
   return null
 }
 
+/**
+ * Whether this session belongs to a special patient (prescription renewals). Serialized as the
+ * string "true"/"false" in the token. This only decides what the UI offers — the backend
+ * re-checks the flag in the database on every renewal call, so a stale token can't grant access.
+ */
+export function readSpecialPatientClaim(claims) {
+  return String(claims?.special_patient ?? '').toLowerCase() === 'true'
+}
+
 export function isExpired(claims) {
   if (!claims?.exp) return false
   return Date.now() >= claims.exp * 1000

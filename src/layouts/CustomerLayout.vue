@@ -1,13 +1,17 @@
 <script setup>
+import { computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
-const { phoneNumber, logout } = useAuth()
+const { phoneNumber, logout, isSpecialPatient } = useAuth()
 
-const tabs = [
+// Renewals are only offered to special patients. This is presentation only — the backend
+// re-checks the flag in the database on every renewal call.
+const tabs = computed(() => [
   { to: { name: 'customer-dashboard' }, label: 'خانه', icon: 'home' },
   { to: { name: 'order-tracking' }, label: 'سفارش‌ها', icon: 'flask' },
+  ...(isSpecialPatient.value ? [{ to: { name: 'renewal-list' }, label: 'تمدید نسخه', icon: 'refresh' }] : []),
   { to: { name: 'tickets' }, label: 'پشتیبانی', icon: 'chat' },
-]
+])
 </script>
 
 <template>
@@ -46,6 +50,9 @@ const tabs = [
           </svg>
           <svg v-else-if="tab.icon === 'flask'" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 3h6m-5 0v6.5L5.5 18a1.5 1.5 0 001.3 2.2h10.4a1.5 1.5 0 001.3-2.2L14 9.5V3" />
+          </svg>
+          <svg v-else-if="tab.icon === 'refresh'" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 8m0 0V4m0 4h-4m4 4a8 8 0 01-13.7 5.7L4 16m0 0v4m0-4h4" />
           </svg>
           <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h8m-8-4h5m-9 12l2.5-3.5H17a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v8.5a2 2 0 002 2h1z" />

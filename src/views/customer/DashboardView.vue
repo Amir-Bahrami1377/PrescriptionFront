@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useOrdersStore } from '@/stores/ordersStore'
+import { useAuth } from '@/composables/useAuth'
 import { useTestCatalog } from '@/composables/useTestCatalog'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -8,6 +9,7 @@ import AppButton from '@/components/common/AppButton.vue'
 import { formatDate, orderCreatedAt } from '@/lib/format'
 
 const ordersStore = useOrdersStore()
+const { isSpecialPatient } = useAuth()
 const { ensureLoaded, testNames } = useTestCatalog()
 const orders = ref([])
 const loading = ref(true)
@@ -29,6 +31,18 @@ onMounted(async () => {
         <AppButton class="mt-4 !bg-white !text-primary-700 hover:!bg-primary-50">ثبت آزمایش جدید</AppButton>
       </router-link>
     </div>
+
+    <router-link
+      v-if="isSpecialPatient"
+      :to="{ name: 'renewal-list' }"
+      class="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-primary-100 bg-primary-50 p-4 transition-colors hover:bg-primary-100"
+    >
+      <div>
+        <p class="text-sm font-bold text-primary-800">تمدید نسخه</p>
+        <p class="mt-0.5 text-xs text-primary-700">به‌عنوان بیمار ویژه می‌توانید نسخه فعلی خود را تمدید کنید.</p>
+      </div>
+      <span class="shrink-0 text-sm font-medium text-primary-700">مشاهده ←</span>
+    </router-link>
 
     <div class="mt-8">
       <div class="mb-3 flex items-center justify-between">
