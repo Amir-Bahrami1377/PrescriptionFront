@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import * as catalogApi from '@/api/catalogApi'
@@ -34,9 +34,18 @@ const thirdPartyNationalCode = ref('')
 const thirdPartyPhoneNumber = ref('')
 const requestsConsultation = ref(false)
 
+// The cap is enforced by the backend; it also reports how much is left, so the form can say so
+// up front instead of letting someone fill everything in and get rejected on submit.
+const capacity = computed(() => ordersStore.capacity)
+const atCapacity = computed(() => capacity.value?.remaining === 0)
+
 onMounted(async () => {
   try {
-    const [testList] = await Promise.all([catalogApi.listTests(), ensureInsuranceTypesLoaded()])
+    const [testList] = await Promise.all([
+      catalogApi.listTests(),
+      ensureInsuranceTypesLoaded(),
+      ordersStore.fetchMyOrders().catch(() => null),
+    ])
     tests.value = testList ?? []
   } catch {
     toast.error('دریافت فهرست آزمایش‌ها با خطا مواجه شد')
@@ -144,8 +153,16 @@ async function submit() {
     </div>
 
     <div class="sticky bottom-20 rounded-2xl border border-ink-100 bg-surface p-4 shadow-sm shadow-ink-900/5">
-      <p class="mb-3 text-xs text-ink-500">هزینه ویزیت پس از بررسی و تایید پزشک مشخص می‌شود.</p>
-      <AppButton block :loading="submitting" @click="submit">ارسال برای بررسی پزشک</AppButton>
+      <p v-if="atCapacity" class="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+        در حال حاضر {{ capacity.used }} سفارش در انتظار بررسی پزشک دارید و به سقف {{ capacity.limit }} سفارش رسیده‌اید. تا
+        بررسی یکی از آن‌ها امکان ثبت سفارش جدید نیست.
+        <router-link :to="{ name: 'order-tracking' }" class="font-medium underline">مشاهده سفارش‌ها</router-link>
+      </p>
+      <p v-else class="mb-3 text-xs text-ink-500">
+        هزینه ویزیت پس از بررسی و تایید پزشک مشخص می‌شود.<template v-if="capacity">
+          می‌توانید {{ capacity.remaining }} سفارش دیگر در انتظار بررسی داشته باشید.</template>
+      </p>
+      <AppButton block :disabled="atCapacity" :loading="submitting" @click="submit">ارسال برای بررسی پزشک</AppButton>
     </div>
   </div>
 </template>

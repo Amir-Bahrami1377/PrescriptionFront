@@ -1,22 +1,30 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useToast } from 'vue-toastification'
 import { useOrdersStore } from '@/stores/ordersStore'
 import { useTestCatalog } from '@/composables/useTestCatalog'
+import { apiErrorMessage } from '@/lib/apiError'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import { formatDate, formatRials, orderCreatedAt, orderTotal } from '@/lib/format'
 
+const toast = useToast()
 const ordersStore = useOrdersStore()
 const { ensureLoaded, testNames } = useTestCatalog()
 const orders = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
-  const [recentOrders] = await Promise.all([ordersStore.fetchRecentOrders(), ensureLoaded()])
-  orders.value = recentOrders
-  loading.value = false
+  try {
+    const [myOrders] = await Promise.all([ordersStore.fetchMyOrders(), ensureLoaded()])
+    orders.value = myOrders
+  } catch (error) {
+    toast.error(apiErrorMessage(error, 'دریافت سفارش‌ها با خطا مواجه شد'))
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

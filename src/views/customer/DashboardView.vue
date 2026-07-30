@@ -15,9 +15,14 @@ const orders = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
-  const [recentOrders] = await Promise.all([ordersStore.fetchRecentOrders(), ensureLoaded()])
-  orders.value = recentOrders
-  loading.value = false
+  try {
+    const [myOrders] = await Promise.all([ordersStore.fetchMyOrders(), ensureLoaded()])
+    orders.value = myOrders
+  } catch {
+    // the dashboard degrades to its empty state rather than blocking on a failed list
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

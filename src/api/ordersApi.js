@@ -25,6 +25,17 @@ export function createOrder({ labTestIds, note, file, basicInsurance, thirdParty
     .then((res) => res.data)
 }
 
+/**
+ * The signed-in customer's own orders, newest first, plus how much of their
+ * pending-approval allowance is left: { orders, pendingApprovalCapacity: { used, limit, remaining } }.
+ * `limit` comes from the same constant CreateOrder validates against, so the UI never has to
+ * hardcode it. List entries omit the third-party national code and phone — fetch the single
+ * order for those.
+ */
+export function listMyOrders() {
+  return axiosClient.get('/api/orders/mine').then((res) => res.data)
+}
+
 /** The exact basic-insurance enum member names, straight from the backend. Anonymous endpoint. */
 export function listBasicInsuranceTypes() {
   return axiosClient.get('/api/orders/basic-insurance-types').then((res) => res.data)
