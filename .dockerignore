@@ -1,0 +1,33 @@
+# node_modules must not be copied: the Dockerfile runs `npm ci` first, and a later `COPY . .`
+# would overwrite those Linux binaries with whatever the host installed (esbuild/rollup ship
+# platform-specific native builds, so a Windows or macOS tree breaks the build).
+node_modules
+dist
+dist-ssr
+
+.git
+.gitignore
+.github
+
+# Local tooling and agent scratch output — never part of an image.
+.claude
+.agents
+.vs
+.vscode
+.playwright-mcp
+skills-lock.json
+
+# Secrets and local overrides; the API base URL is passed as a build arg instead.
+.env
+.env.*
+!.env.example
+
+*.local
+*.log
+npm-debug.log*
+
+Dockerfile
+.dockerignore
+docker-compose*.yml
+README.md
+frontend-plan.md

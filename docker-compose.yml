@@ -1,3 +1,6 @@
+# LOCAL ONLY — builds from source and publishes a port so you can poke at the production
+# image on your own machine. Never run this file on the server: use docker-compose.prod.yml,
+# which pulls a pinned image and publishes nothing (Caddy owns 80/443 there).
 services:
   prescription-frontend:
     build:
@@ -8,7 +11,3 @@ services:
     ports:
       - "8081:80"
     restart: unless-stopped
-    # If the Prescription.Api backend is defined in this same compose file (or joins this
-    # network externally), add it here so the frontend can reach it by service name, e.g.:
-    # depends_on:
-    #   - prescription-api

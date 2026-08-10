@@ -1,0 +1,25 @@
+# Production deployment. Copied to the server by CI alongside a generated .env that pins
+# FRONTEND_IMAGE and IMAGE_TAG, then run with:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Deliberately publishes no ports. The backend stack owns a Caddy that terminates TLS on 80/443
+# and reverse-proxies everything except /api/* and /health to `frontend:80` over the shared
+# network — binding those ports here would collide with it and take the whole site down.
+services:
+  frontend:
+    image: ${FRONTEND_IMAGE}:${IMAGE_TAG}
+    # Caddy addresses this container by name; renaming it breaks the upstream.
+    container_name: frontend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  default:
+    # Created and owned by the backend stack — this one only attaches to it.
+    name: prescription
+    external: true

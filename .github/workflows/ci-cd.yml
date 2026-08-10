@@ -1,0 +1,179 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Lets you redeploy the current main without pushing an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  DEPLOY_PATH: /opt/prescription-front
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # There is no test suite yet, so a clean production build is the gate: it fails on
+      # missing imports, broken SFCs and unresolved aliases.
+      - name: Build
+        run: npm run build
+
+  preflight:
+    name: Preflight (secrets)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      # Name the missing secret explicitly — otherwise a blank one surfaces later as an
+      # opaque SSH failure that looks like the server is down.
+      - name: Check deploy secrets are present
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$SSH_HOST" ] || missing="$missing SSH_HOST"
+          [ -n "$SSH_USER" ] || missing="$missing SSH_USER"
+          [ -n "$SSH_PASSWORD" ] || missing="$missing SSH_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing"
+            exit 1
+          fi
+          echo "All required deploy secrets are set (SSH_PORT is optional, defaults to 22)."
+
+  publish:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    needs: [build, preflight]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR rejects uppercase paths and this owner/repo is mixed case.
+      - name: Compute lowercase image name
+        id: meta
+        run: |
+          image=$(echo "${{ env.REGISTRY }}/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "Image: $image"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # Tagged by commit SHA only. A `latest` tag would make a server restart silently
+          # pull whatever was pushed last instead of the build that was actually deployed.
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          build-args: |
+            VITE_PRESCRIPTION_API_BASE_URL=
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: docker-compose.prod.yml
+          target: ${{ env.DEPLOY_PATH }}
+
+      - name: Pull and restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: DEPLOY_PATH,FRONTEND_IMAGE,IMAGE_TAG,REGISTRY_USER,REGISTRY_TOKEN
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+
+            # Short-lived token from this run; enough to pull the image we just pushed.
+            echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+
+            # Pins the exact build. printf rather than a heredoc: heredoc terminators are
+            # whitespace-sensitive and this block is already indented inside YAML.
+            printf 'FRONTEND_IMAGE=%s\nIMAGE_TAG=%s\n' "$FRONTEND_IMAGE" "$IMAGE_TAG" > .env
+
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # Only removes dangling layers, so the backend's images are untouched.
+            docker image prune -f
+
+            # Don't leave registry credentials behind; a restart reuses the local image.
+            docker logout ghcr.io
+
+            docker compose -f docker-compose.prod.yml ps
+        env:
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          FRONTEND_IMAGE: ${{ needs.publish.outputs.image }}
+          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the container serves the app
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            # Checked from inside the container because nothing is published to the host.
+            for i in $(seq 1 10); do
+              if docker exec frontend wget --quiet --tries=1 --spider http://127.0.0.1/; then
+                echo "frontend is serving"
+                exit 0
+              fi
+              echo "waiting for frontend ($i/10)…"
+              sleep 3
+            done
+            echo "::error::frontend did not answer on port 80"
+            docker logs --tail 50 frontend
+            exit 1
