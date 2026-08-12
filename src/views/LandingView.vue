@@ -269,6 +269,25 @@ const steps = [
 
     <footer class="border-t border-ink-100 px-4 py-8 text-center text-sm text-ink-400 sm:px-6">
       <p>سامانه ثبت آزمایش</p>
+
+      <!-- eNamad trust seal. The markup (including the non-standard `code` attribute) is
+           supplied verbatim by eNamad and is what their verification looks for, so keep it
+           as-is; only the wrapper below is ours. The image is served from enamad.ir. -->
+      <div class="mt-6 flex justify-center">
+        <a
+          referrerpolicy="origin"
+          target="_blank"
+          href="https://trustseal.enamad.ir/?id=7292318&Code=AEsQZGdjdtDkjqgTYtRhk93ah03zWRLp"
+        >
+          <img
+            referrerpolicy="origin"
+            src="https://trustseal.enamad.ir/logo.aspx?id=7292318&Code=AEsQZGdjdtDkjqgTYtRhk93ah03zWRLp"
+            alt="نماد اعتماد الکترونیکی"
+            style="cursor: pointer"
+            code="AEsQZGdjdtDkjqgTYtRhk93ah03zWRLp"
+          />
+        </a>
+      </div>
     </footer>
   </div>
 </template>
