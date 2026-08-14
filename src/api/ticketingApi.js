@@ -19,3 +19,17 @@ export function replyTicket(id, message) {
 export function closeTicket(id) {
   return axiosClient.post(`/api/tickets/${id}/close`).then((res) => res.data)
 }
+
+export function reopenTicket(id) {
+  return axiosClient.post(`/api/tickets/${id}/reopen`).then((res) => res.data)
+}
+
+export function listAdminTickets(status) {
+  return axiosClient
+    .get('/api/admin/tickets', { params: status ? { status } : {} })
+    .then((res) => res.data)
+}
+
+export function queueTicketClosure(id) {
+  return axiosClient.post(`/api/admin/tickets/${id}/queue-closure`).then((res) => res.data)
+}

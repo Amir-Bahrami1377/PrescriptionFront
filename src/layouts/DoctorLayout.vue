@@ -18,6 +18,7 @@ const doctorNav = [
 const adminNav = [
   { to: { name: 'admin-catalog' }, label: 'مدیریت کاتالوگ آزمایش‌ها' },
   { to: { name: 'admin-users' }, label: 'مدیریت کاربران' },
+  { to: { name: 'admin-tickets' }, label: 'تیکت‌های پشتیبانی' },
 ]
 
 const navItems = computed(() => (role.value === ROLES.ADMIN ? adminNav : doctorNav))

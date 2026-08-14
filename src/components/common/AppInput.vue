@@ -10,6 +10,7 @@ const props = defineProps({
   hint: { type: String, default: '' },
   as: { type: String, default: 'input' }, // input | textarea
   rows: { type: Number, default: 3 },
+  maxLength: { type: Number, default: undefined },
   dir: { type: String, default: undefined },
   disabled: { type: Boolean, default: false },
   /**
@@ -43,6 +44,7 @@ function onInput(event) {
       :value="modelValue"
       :placeholder="placeholder"
       :rows="rows"
+      :maxlength="maxLength"
       :dir="dir"
       :disabled="disabled"
       class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400"
@@ -54,6 +56,7 @@ function onInput(event) {
       :type="type"
       :inputmode="numeric ? 'numeric' : undefined"
       :value="modelValue"
+      :maxlength="maxLength"
       :placeholder="placeholder"
       :dir="dir"
       :disabled="disabled"

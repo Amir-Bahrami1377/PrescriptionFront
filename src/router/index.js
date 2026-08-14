@@ -80,6 +80,7 @@ const routes = [
     children: [
       { path: '', name: 'admin-catalog', component: () => import('@/views/admin/TestCatalogManageView.vue') },
       { path: 'users', name: 'admin-users', component: () => import('@/views/admin/UserManagementView.vue') },
+      { path: 'tickets', name: 'admin-tickets', component: () => import('@/views/admin/AdminTicketsView.vue') },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/' },
