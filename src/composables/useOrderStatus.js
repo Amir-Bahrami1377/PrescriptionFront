@@ -38,11 +38,19 @@ const SYNONYMS = {
   awaitingconsultationopinion: 'awaitingConsultationOpinion',
 }
 
+// Draft is returned in admin order history but is not part of the customer's submitted-order
+// timeline. Keep it outside STEPS so the existing numeric status indexes remain unchanged.
+const STANDALONE_STATUSES = {
+  draft: { key: 'draft', label: 'پیش‌نویس', tone: 'ink', index: -1 },
+}
+
 export function normalizeOrderStatus(status) {
   if (typeof status === 'number' && STEPS[status]) {
     return { ...STEPS[status], index: status }
   }
-  const key = SYNONYMS[String(status ?? '').toLowerCase().replace(/[\s_-]/g, '')]
+  const normalized = String(status ?? '').toLowerCase().replace(/[\s_-]/g, '')
+  if (STANDALONE_STATUSES[normalized]) return STANDALONE_STATUSES[normalized]
+  const key = SYNONYMS[normalized]
   const index = STEPS.findIndex((s) => s.key === key)
   if (index >= 0) return { ...STEPS[index], index }
   return { key: 'unknown', label: String(status ?? 'نامشخص'), tone: 'ink', index: -1 }

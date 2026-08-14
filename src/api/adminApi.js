@@ -4,6 +4,11 @@ export function listUsers(role) {
   return axiosClient.get('/api/admin/users', { params: role ? { role } : {} }).then((res) => res.data)
 }
 
+/** All orders created by a user, newest first. Returns an empty array for unknown users. */
+export function listUserOrders(userId) {
+  return axiosClient.get(`/api/admin/users/${userId}/orders`).then((res) => res.data)
+}
+
 /**
  * If phoneNumber already exists, the backend updates that user's role instead of creating a
  * new one — so this doubles as "edit role" (re-post the same phone with a new role).

@@ -3,13 +3,17 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import * as adminApi from '@/api/adminApi'
 import { apiErrorMessage } from '@/lib/apiError'
+import { formatDate, formatRials, orderCreatedAt, orderTotal } from '@/lib/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppModal from '@/components/common/AppModal.vue'
 import DataGrid from '@/components/common/DataGrid.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 
 const toast = useToast()
+const faNumberFormatter = new Intl.NumberFormat('fa-IR')
 
 const roleLabels = { Doctor: 'پزشک', Admin: 'مدیر', Customer: 'مشتری' }
 const roleClass = {
@@ -59,6 +63,46 @@ onMounted(load)
 function selectFilter(value) {
   roleFilter.value = value
   load()
+}
+
+// --- order history ---
+const orderHistoryOpen = ref(false)
+const orderHistoryUser = ref(null)
+const orderHistory = ref([])
+const orderHistoryLoading = ref(false)
+const orderHistoryError = ref('')
+
+const orderHistoryTitle = computed(() => {
+  const user = orderHistoryUser.value
+  if (!user) return 'تاریخچه سفارشات'
+  return `تاریخچه سفارشات ${user.fullName || user.phoneNumber}`
+})
+
+function orderTestsLabel(order) {
+  const count = order.labTestIds?.length ?? 0
+  return count ? `${faNumberFormatter.format(count)} آزمایش` : 'آزمایش'
+}
+
+async function fetchOrderHistory() {
+  if (!orderHistoryUser.value) return
+  orderHistoryLoading.value = true
+  orderHistoryError.value = ''
+  try {
+    orderHistory.value = (await adminApi.listUserOrders(orderHistoryUser.value.id)) ?? []
+  } catch (error) {
+    orderHistory.value = []
+    orderHistoryError.value = apiErrorMessage(error, 'دریافت تاریخچه سفارشات با خطا مواجه شد')
+    toast.error(orderHistoryError.value)
+  } finally {
+    orderHistoryLoading.value = false
+  }
+}
+
+function openOrderHistory(row) {
+  orderHistoryUser.value = row
+  orderHistory.value = []
+  orderHistoryOpen.value = true
+  fetchOrderHistory()
 }
 
 // --- add / edit modal (backend upserts staff role by phone number) ---
@@ -196,10 +240,70 @@ async function doDelete() {
     </template>
 
     <template #actions="{ row }">
+      <AppButton
+        variant="secondary"
+        size="sm"
+        :loading="orderHistoryLoading && orderHistoryUser?.id === row.id"
+        :disabled="orderHistoryLoading"
+        @click="openOrderHistory(row)"
+      >
+        تاریخچه سفارشات
+      </AppButton>
       <AppButton variant="ghost" size="sm" @click="openEdit(row)">ویرایش نقش</AppButton>
       <AppButton variant="ghost" size="sm" class="!text-brick-600 hover:!bg-brick-50" @click="deleteTarget = row">حذف</AppButton>
     </template>
   </DataGrid>
+
+  <!-- order history -->
+  <AppModal v-model="orderHistoryOpen" :title="orderHistoryTitle">
+    <div class="max-h-[65vh] overflow-y-auto pe-1">
+      <div v-if="orderHistoryLoading" class="space-y-3" aria-label="در حال دریافت تاریخچه سفارشات">
+        <div v-for="i in 3" :key="i" class="h-28 animate-pulse rounded-2xl bg-ink-50" />
+      </div>
+
+      <div v-else-if="orderHistoryError" class="rounded-2xl border border-brick-100 bg-brick-50 p-4">
+        <p class="text-sm text-brick-700">{{ orderHistoryError }}</p>
+        <AppButton variant="ghost" size="sm" class="mt-3 !text-brick-700 hover:!bg-brick-100" @click="fetchOrderHistory">
+          تلاش دوباره
+        </AppButton>
+      </div>
+
+      <EmptyState
+        v-else-if="!orderHistory.length"
+        title="سفارشی ثبت نشده"
+        description="این کاربر هنوز هیچ سفارشی ثبت نکرده است."
+      />
+
+      <div v-else class="space-y-3">
+        <article
+          v-for="order in orderHistory"
+          :key="order.id"
+          class="rounded-2xl border border-ink-100 bg-paper p-4"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate font-medium text-ink-900">{{ orderTestsLabel(order) }}</p>
+              <p class="font-data mt-1 text-xs text-ink-400">{{ formatDate(orderCreatedAt(order)) }}</p>
+            </div>
+            <StatusBadge :status="order.status" />
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink-100 pt-3">
+            <p class="font-data text-sm font-medium text-ink-700">{{ formatRials(orderTotal(order)) }}</p>
+            <div v-if="order.isForThirdParty || order.requestsConsultation || order.hasResult" class="flex flex-wrap gap-1.5">
+              <span v-if="order.isForThirdParty" class="rounded-full bg-ink-100 px-2.5 py-1 text-xs text-ink-600">برای شخص دیگر</span>
+              <span v-if="order.requestsConsultation" class="rounded-full bg-primary-50 px-2.5 py-1 text-xs text-primary-700">با مشاوره</span>
+              <span v-if="order.hasResult" class="rounded-full bg-primary-50 px-2.5 py-1 text-xs text-primary-700">نتیجه ثبت شده</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <template #footer>
+      <AppButton variant="ghost" @click="orderHistoryOpen = false">بستن</AppButton>
+    </template>
+  </AppModal>
 
   <!-- add / edit -->
   <AppModal v-model="modalOpen" :title="modalMode === 'create' ? 'افزودن پزشک یا مدیر' : 'ویرایش نقش کاربر'">
