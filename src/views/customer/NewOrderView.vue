@@ -124,8 +124,8 @@ async function submit() {
       </label>
 
       <div v-if="isForThirdParty" class="mt-4 grid gap-3 sm:grid-cols-2">
-        <AppInput v-model="thirdPartyNationalCode" label="کد ملی فرد" dir="ltr" inputmode="numeric" placeholder="۱۰ رقم" />
-        <AppInput v-model="thirdPartyPhoneNumber" label="شماره موبایل فرد" dir="ltr" placeholder="09xxxxxxxxx" />
+        <AppInput v-model="thirdPartyNationalCode" label="کد ملی فرد" dir="ltr" numeric placeholder="۱۰ رقم" />
+        <AppInput v-model="thirdPartyPhoneNumber" label="شماره موبایل فرد" dir="ltr" numeric placeholder="09xxxxxxxxx" />
       </div>
     </div>
 

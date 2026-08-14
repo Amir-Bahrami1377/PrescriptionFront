@@ -125,7 +125,7 @@ async function saveRenewalFee() {
       </div>
 
       <div class="rounded-2xl border border-ink-100 bg-surface p-4">
-        <AppInput v-model="feeInput" type="number" dir="ltr" label="هزینه ویزیت جدید (ریال)" placeholder="مثلاً ۵۰۰۰۰۰" />
+        <AppInput v-model="feeInput" numeric dir="ltr" label="هزینه ویزیت جدید (ریال)" placeholder="مثلاً ۵۰۰۰۰۰" />
         <AppButton class="mt-4" block :loading="saving" @click="save">ذخیره هزینه ویزیت</AppButton>
       </div>
     </section>
@@ -142,7 +142,7 @@ async function saveRenewalFee() {
       </div>
 
       <div class="rounded-2xl border border-ink-100 bg-surface p-4">
-        <AppInput v-model="consultationFeeInput" type="number" dir="ltr" label="هزینه مشاوره جدید (ریال)" placeholder="مثلاً ۲۰۰۰۰۰" />
+        <AppInput v-model="consultationFeeInput" numeric dir="ltr" label="هزینه مشاوره جدید (ریال)" placeholder="مثلاً ۲۰۰۰۰۰" />
         <AppButton class="mt-4" block :loading="savingConsultationFee" @click="saveConsultationFee">ذخیره هزینه مشاوره</AppButton>
       </div>
     </section>
@@ -159,7 +159,7 @@ async function saveRenewalFee() {
       </div>
 
       <div class="rounded-2xl border border-ink-100 bg-surface p-4">
-        <AppInput v-model="renewalFeeInput" type="number" dir="ltr" label="هزینه تمدید جدید (ریال)" placeholder="مثلاً ۳۰۰۰۰۰" />
+        <AppInput v-model="renewalFeeInput" numeric dir="ltr" label="هزینه تمدید جدید (ریال)" placeholder="مثلاً ۳۰۰۰۰۰" />
         <AppButton class="mt-4" block :loading="savingRenewalFee" @click="saveRenewalFee">ذخیره هزینه تمدید</AppButton>
       </div>
     </section>

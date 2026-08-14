@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, ref, watch } from 'vue'
+import { toEnglishDigits } from '@/lib/digits'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -25,7 +26,8 @@ function emitValue() {
 }
 
 function onInput(index, event) {
-  const raw = event.target.value.replace(/\D/g, '')
+  // Normalize first: stripping non-\d before converting would throw away Persian digits.
+  const raw = toEnglishDigits(event.target.value).replace(/\D/g, '')
   if (!raw) {
     digits.value[index] = ''
     emitValue()
@@ -43,7 +45,7 @@ function onKeydown(index, event) {
 }
 
 function onPaste(event) {
-  const text = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, props.length)
+  const text = toEnglishDigits(event.clipboardData.getData('text')).replace(/\D/g, '').slice(0, props.length)
   if (!text) return
   event.preventDefault()
   digits.value = Array.from({ length: props.length }, (_, i) => text[i] ?? '')

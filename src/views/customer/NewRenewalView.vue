@@ -58,7 +58,7 @@ async function submit() {
       placeholder="کدی که هنگام تکمیل سفارش قبلی دریافت کرده‌اید"
     />
 
-    <AppInput v-model="nationalCode" label="کد ملی بیمار" dir="ltr" inputmode="numeric" placeholder="۱۰ رقم" />
+    <AppInput v-model="nationalCode" label="کد ملی بیمار" dir="ltr" numeric placeholder="۱۰ رقم" />
 
     <AppSelect v-model="basicInsurance" label="بیمه پایه" :options="insuranceOptions" />
 

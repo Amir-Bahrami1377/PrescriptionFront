@@ -92,6 +92,7 @@ onUnmounted(() => clearInterval(resendTimer))
         label="شماره موبایل"
         type="tel"
         dir="ltr"
+        numeric
         placeholder="09xxxxxxxxx"
         :error="phoneError"
       />

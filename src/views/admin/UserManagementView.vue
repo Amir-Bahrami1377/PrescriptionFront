@@ -208,6 +208,7 @@ async function doDelete() {
         v-model="form.phoneNumber"
         label="شماره موبایل"
         dir="ltr"
+        numeric
         placeholder="09xxxxxxxxx"
         :disabled="modalMode === 'edit'"
         :hint="modalMode === 'edit' ? 'شماره موبایل قابل تغییر نیست' : ''"

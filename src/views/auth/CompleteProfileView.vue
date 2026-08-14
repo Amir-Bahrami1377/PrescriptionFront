@@ -46,8 +46,8 @@ const onSubmit = handleSubmit(async (values) => {
 
   <form class="mt-6 space-y-4" @submit="onSubmit">
     <AppInput v-model="fullName" label="نام و نام خانوادگی" :error="fullNameError" />
-    <AppInput v-model="nationalCode" label="کد ملی" dir="ltr" inputmode="numeric" :error="nationalCodeError" />
-    <AppInput v-model="age" label="سن" type="number" dir="ltr" :error="ageError" />
+    <AppInput v-model="nationalCode" label="کد ملی" dir="ltr" numeric :error="nationalCodeError" />
+    <AppInput v-model="age" label="سن" dir="ltr" numeric :error="ageError" />
     <label class="block">
       <span class="mb-1.5 block text-sm font-medium text-ink-700">جنسیت</span>
       <select
